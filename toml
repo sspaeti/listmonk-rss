@@ -1,0 +1,16 @@
+[project]
+name = "linkmonk-rss"
+version = "0.1.0"
+description = "RSS feed to Linkmonk campaign sender"
+requires-python = ">=3.8"
+dependencies = [
+    "httpx",
+    "feedparser",
+    "jinja2",
+    "python-dotenv",
+    "click",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

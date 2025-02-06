@@ -1,0 +1,135 @@
+import os
+import json
+from datetime import datetime
+from pathlib import Path
+
+import httpx
+import feedparser
+from jinja2 import Template
+from dotenv import load_dotenv
+import click
+
+# Load environment variables
+load_dotenv()
+
+# Constants
+STATE_FILE = Path("last_update.json")
+TEMPLATE_FILE = Path("template.html.j2")
+
+
+def load_last_update() -> datetime:
+    """Load the last update timestamp from the state file."""
+    if STATE_FILE.exists():
+        with open(STATE_FILE, "r") as f:
+            data = json.load(f)
+            return datetime.fromisoformat(data["last_update"])
+    return datetime.min
+
+
+def save_last_update(timestamp: datetime):
+    """Save the last update timestamp to the state file."""
+    with open(STATE_FILE, "w") as f:
+        json.dump({"last_update": timestamp.isoformat()}, f)
+
+
+def fetch_rss_feed(feed_url: str, last_update: datetime) -> list:
+    """Fetch and parse RSS feed, returning new items since last update."""
+    feed = feedparser.parse(feed_url)
+    new_items = [
+        entry for entry in feed.entries 
+        if datetime(*entry.published_parsed[:6]) > last_update
+    ]
+    return new_items
+
+
+def get_list_id(host: str, api_key: str, list_name: str) -> int:
+    """Get list ID from list name using Linkmonk API."""
+    url = f"{host}/api/lists"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    with httpx.Client() as client:
+        response = client.get(url, headers=headers)
+        response.raise_for_status()
+        
+        # Find the list with matching name
+        lists = response.json()["data"]["results"]
+        for lst in lists:
+            if lst["name"] == list_name:
+                return lst["id"]
+        
+        raise ValueError(f"List '{list_name}' not found")
+
+
+def create_campaign_content(items: list, template: Template) -> str:
+    """Generate campaign content using Jinja2 template."""
+    return template.render(items=items)
+
+
+def send_campaign(host: str, api_key: str, list_id: int, content: str):
+    """Send campaign using Linkmonk API."""
+    url = f"{host}/api/campaigns"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "name": "RSS Update Newsletter",
+        "subject": "Latest Updates from RSS Feed",
+        "lists": [list_id],
+        "content": content
+    }
+    
+    with httpx.Client() as client:
+        response = client.post(url, json=data, headers=headers)
+        response.raise_for_status()
+
+
+@click.command()
+@click.option("--dry-run", is_flag=True, help="Run without sending campaign")
+def main(dry_run: bool):
+    # Load template
+    template = Template(TEMPLATE_FILE.read_text())
+    
+    # Get last update time
+    last_update = load_last_update()
+    
+    # Fetch new RSS items
+    items = fetch_rss_feed(os.getenv("RSS_FEED"), last_update)
+    
+    if not items:
+        print("No new items found.")
+        return
+    
+    # Create campaign content
+    content = create_campaign_content(items, template)
+    
+    if dry_run:
+        print("Dry run - would send campaign with content:")
+        print(content)
+        return
+    
+    # Get list ID
+    list_id = get_list_id(
+        host=os.getenv("LINKMONK_HOST"),
+        api_key=os.getenv("LINKMONK_API"),
+        list_name=os.getenv("LIST_NAME")
+    )
+    
+    # Send campaign
+    send_campaign(
+        host=os.getenv("LINKMONK_HOST"),
+        api_key=os.getenv("LINKMONK_API"),
+        list_id=list_id,
+        content=content
+    )
+    
+    # Update last update time
+    save_last_update(datetime.now())
+    print("Campaign sent successfully!")
+
+
+if __name__ == "__main__":
+    main()
