@@ -18,6 +18,10 @@ Automatically send newsletters from RSS feeds using
 - GitHub account and a version of this repository
 - An existing RSS feed URL, obviously
 
+## Diagram
+
+![Architecture](assets/C4/Architecture.png)
+
 ## Setup
 
 ### 1. Local Setup
@@ -70,7 +74,9 @@ To receive notifications when newsletters are scheduled:
 
 You should run the trigger manually for the first time so that the state can be
 saved (make sure you delete the campaign on your listmonk instance if you don't
-want your subscribers to get a mail with all existing items).
+want your subscribers to get a mail with all existing items). Running the
+workflow for the first time will show an error that it wasn't able to find the
+artefact, that's fine.
 
 ## Configuration
 

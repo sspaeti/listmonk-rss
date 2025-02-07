@@ -1,0 +1,40 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+' Adjust layout to be more left-to-right
+left to right direction
+
+
+title Listmonk RSS Newsletter Automation 
+
+' Define actors and systems
+Person(author, "Author", "Writes blog content")
+Person(subscriber, "Newsletter Subscriber", "Receives newsletters")
+
+' Automation system boundary
+System_Boundary(system, "Newsletter Automation", "Automated newsletter workflow") {
+    Container(script, "Python Script", "python", "RSS feed processing")
+    System(github_actions, "GitHub Actions", "Workflow automation")
+    System(pushover, "Pushover", "Notification service")
+}
+
+
+' Content Management Systems boundary
+System(listmonk, "Listmonk", "Newsletter management: subscribers, lists, campaigns")
+System(blog, "Blog with RSS Feed", "Content source")
+
+
+' Relationships
+Rel_Neighbor(author, blog, "writes content")
+Rel_Neighbor(subscriber, blog, "reads blog and subscribes to", "Web")
+Rel(blog,listmonk, "signup form for a newsletter subscription", "HTML")
+Rel(blog, script, "provides RSS feed")
+Rel(script, listmonk, "creates a scheduled campaigns", "HTTP API")
+Rel(script, pushover, "sends notifications", "HTTP API")
+Rel(pushover, author, "notifies about a scheduled campaign", "Pushover")
+Rel(listmonk, subscriber, "sends newsletters", "SMTP")
+Rel(github_actions, script, "triggers", "cron-job")
+
+SHOW_FLOATING_LEGEND()
+
+@enduml
