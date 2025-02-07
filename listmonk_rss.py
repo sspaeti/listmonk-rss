@@ -47,7 +47,8 @@ def save_last_update(timestamp: datetime, state_file: str):
     """Save the last update timestamp to the state file."""
     state_path = Path(state_file)
     logging.info(f"save {timestamp} to {state_file}")
-    # make sure that the directories in state_file exist. AI!
+    # Create parent directories if they don't exist
+    state_path.parent.mkdir(parents=True, exist_ok=True)
     with open(state_path, "w") as f:
         json.dump({"last_update": timestamp.isoformat()}, f)
 
