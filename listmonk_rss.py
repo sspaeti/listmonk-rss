@@ -31,26 +31,49 @@ def get_opengraph_data(url):
     return og_data
 
 
-def load_last_update(state_file: str) -> datetime:
-    """Load the last update timestamp from the state file."""
-    result = datetime.min
-    state_path = Path(state_file)
-    if state_path.exists():
-        with open(state_path, "r") as f:
-            data = json.load(f)
-            result = datetime.fromisoformat(data["last_update"])
-    logging.info(f"found last date {result}")
-    return result
+def get_last_update() -> datetime:
+    """Get the last update timestamp from GitHub repo variable."""
+    github_token = os.getenv("GITHUB_TOKEN")
+    repo = os.getenv("GITHUB_REPOSITORY")
+    url = f"https://api.github.com/repos/{repo}/actions/variables/LAST_UPDATE"
+    
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {github_token}",
+        "X-GitHub-Api-Version": "2022-11-28"
+    }
+    
+    try:
+        response = httpx.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        return datetime.fromisoformat(data["value"])
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            return datetime.min
+        raise
 
 
-def save_last_update(timestamp: datetime, state_file: str):
-    """Save the last update timestamp to the state file."""
-    state_path = Path(state_file)
-    logging.info(f"save {timestamp} to {state_file}")
-    # Create parent directories if they don't exist
-    state_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(state_path, "w") as f:
-        json.dump({"last_update": timestamp.isoformat()}, f)
+def save_last_update(timestamp: datetime):
+    """Save the last update timestamp to GitHub repo variable."""
+    github_token = os.getenv("GITHUB_TOKEN")
+    repo = os.getenv("GITHUB_REPOSITORY")
+    url = f"https://api.github.com/repos/{repo}/actions/variables/LAST_UPDATE"
+    
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {github_token}",
+        "X-GitHub-Api-Version": "2022-11-28"
+    }
+    
+    data = {
+        "name": "LAST_UPDATE",
+        "value": timestamp.isoformat()
+    }
+    
+    response = httpx.patch(url, headers=headers, json=data)
+    response.raise_for_status()
+    logging.info(f"Saved last update timestamp to GitHub repo variable")
 
 
 def fetch_rss_feed(feed_url: str, last_update: datetime) -> list:
@@ -164,22 +187,20 @@ def send_campaign(host: str, api_user: str, api_token: str, list_id: int, conten
 
 @click.command()
 @click.option("--dry-run", is_flag=True, help="Run without sending campaign")
-@click.option("--state-file", default="last_update.json", 
-              help="Path to JSON file storing last update timestamp")
-def main(dry_run: bool, state_file: str):
+def main(dry_run: bool):
     assert os.getenv("RSS_FEED"), "No RSS feed given"
     # Load template
     template = Template(TEMPLATE_FILE.read_text())
     
     # Get last update time
-    last_update = load_last_update(state_file)
+    last_update = get_last_update()
     
     # Fetch new RSS items
     items = fetch_rss_feed(os.getenv("RSS_FEED"), last_update)
     
     if not items:
         print("No new items found.")
-        save_last_update(datetime.now(), state_file)
+        save_last_update(datetime.now())
         return
     
     # Create campaign content

@@ -22,15 +22,8 @@ jobs:
     - name: Set up Python
       run: uv python install
           
-    - name: Download last update artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: update-state-gh
-        path: build/
-      continue-on-error: true  # Allow first run when artifact doesn't exist
-        
     - name: 👷 Run RSS campaign
-      run: uv run python listmonk_rss.py --state-file build/last-update-gh.json
+      run: uv run python listmonk_rss.py
       env:
         RSS_FEED: ${{ vars.RSS_FEED }}
         LISTMONK_API_USER: ${{ vars.LISTMONK_API_USER }}
@@ -41,9 +34,3 @@ jobs:
         LIST_NAME: ${{ vars.LIST_NAME }}
         DELAY_SEND_MINS: ${{ vars.DELAY_SEND_MINS }}
         
-    - name: Upload last update artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: update-state-gh
-        path: build/
-        retention-days: 31

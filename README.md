@@ -67,7 +67,7 @@ To receive notifications when newsletters are scheduled (this gives you an
 
 2. The workflow is already configured in `.github/workflows/listmonk_rss.yml`
    - Runs on Weekdays at 8:00 UTC
-   - Persists state between runs using GitHub Actions artifacts
+   - Persists state between runs using GitHub repository variables
    - Automatically creates and schedules newsletters
 
 3. To manually trigger the workflow:
