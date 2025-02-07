@@ -8,14 +8,14 @@ Automatically send newsletters from RSS feeds using
 - Receive push notifications when newsletters are scheduled (this gives you an
   opportunity to review the content before it is sent out)
 - Automatically fetch new items from RSS feeds
-- Create newsletters based on a Markdown template 
+- Create newsletters based on a Markdown template
 - Schedule newsletters with new items with configurable delay
 - GitHub Actions integration for automated scheduling
 
 ## Requirements
 
 - A running Listmonk instance (e.g., deployed with
-  [PikaPods](https://www.pikapods.com).
+  [PikaPods](https://www.pikapods.com))
 - GitHub account and a version of this repository
 - An existing RSS feed URL, obviously
 
@@ -27,7 +27,7 @@ Automatically send newsletters from RSS feeds using
 
 ### 1. Local Setup
 
-1. Fork this repository, so that you can setup your own schedule and clone it.
+1. Fork this repository so that you can set up your own schedule and clone it.
 
 2. Install dependencies using uv:
    ```bash
@@ -75,10 +75,10 @@ To receive notifications when newsletters are scheduled (this gives you an
    - Click "Run workflow"
 
 You should run the trigger manually for the first time so that the state can be
-saved (make sure you delete the campaign on your listmonk instance if you don't
-want your subscribers to get a mail with all existing items). Running the
+saved (make sure you delete the campaign on your Listmonk instance if you don't
+want your subscribers to get an email with all existing items). Running the
 workflow for the first time will show an error that it wasn't able to find the
-artefact, that's fine.
+artifact - that's expected.
 
 ## Configuration
 
@@ -108,8 +108,8 @@ Edit `template.md.j2` to customize your newsletter format. The template uses Jin
 
 ## Contributing
 
-Contributions are welcome, but no guarantee that I will be able to act on it. I
-use this mostly for my own purpose. My advice would be to fork it and use
+Contributions are welcome, but there's no guarantee that I will be able to act on them. I
+use this mostly for my own purposes. My advice would be to fork it and
 adjust it to your needs.
 
 ## Contact
