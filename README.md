@@ -1,17 +1,19 @@
 # Listmonk RSS Newsletter Automation
 
 Automatically send newsletters from RSS feeds using [Listmonk (open
-source)](https://listmonk.app) and GitHub Actions (and save $$$ compared to
-[Mailchimp](https://mailchimp.com/features/rss-to-email/) or other newsletter
+source)](https://listmonk.app) and GitHub Actions, saving money compared to
+[Mailchimp](https://mailchimp.com/features/rss-to-email/) and other newsletter
 providers.
 
 ## Features
 
-- Receive push notifications when newsletters are scheduled 
+- Schedule newsletter campaigns with latest update from your feed
 - Automatically fetch new items from RSS feeds
-- Create newsletters based on a Markdown template
-- Schedule newsletters with new items with configurable delay
-- GitHub Actions integration for automated scheduling
+- Create newsletter content based on a Markdown template for RSS feed items
+- Receive push notifications when campaign is scheduled, enough time to
+  edit the draft
+- GitHub Actions integration for automated scheduling without the need for
+  running a server
 
 ## Requirements
 
@@ -26,16 +28,25 @@ providers.
 
 ## Setup
 
-### 1. Local Setup
+### 1. Testing Setup
 
 1. Fork this repository so that you can set up your own schedule and clone it.
 
-2. Install dependencies using uv:
+2. On GitHub, Create a new repository variable `LAST_UPDATE` in your GitHub
+   repo to persist the last update timestamp.
+
+3. Create a GitHub Personal Access Token with `repo` scope at
+   <https://github.com/settings/tokens>, make sure that you have the following
+   permission set: *"Variables" repository permissions (write)* (we need to
+   send an [API call to update a repository
+   variable](https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#update-a-repository-variable)).
+
+4. On your machine, install dependencies using uv:
    ```bash
    uv sync -U
    ```
 
-3. Create a `.env` file with your configuration:
+5. Create a `.env` file with your configuration:
    ```bash
    LISTMONK_API_USER=<your_api_user>
    LISTMONK_API_TOKEN=<your_api_token>
@@ -49,7 +60,7 @@ providers.
    DELAY_SEND_MINS=45
    ```
 
-4. Test the script locally:
+6. Test the script locally with the environment variable beloe:
    ```bash
    make create_campaign
    ```
@@ -73,37 +84,31 @@ PUSHOVER_API_TOKEN=<your-pushover-api-token>
 
 ### 3. GitHub Actions Setup
 
-1. Create a GitHub Personal Access Token with `repo` scope at
-   <https://github.com/settings/tokens>, make sure that you have the following
-   permission set: *"Variables" repository permissions (write)* (we need to
-   send an [API call to update a repository
-   variable](https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#update-a-repository-variable)).
+Once you have setup and tested everything locally, you can move
 
-2. Add your `.env` file contents, Pushover credentials, and GitHub token as
-   GitHub Secrets in your repository (see screenshots below):
+1. Add your `.env` file contents, Pushover credentials, and GitHub token as
+   GitHub Secrets and Environment variables in your repository (see screenshots
+   below):
    - Go to Settings → Secrets and variables → Actions
-   - Add each environment variable as a new repository secret
-
+   - There is a tab "Secrets" and a tab "Variables".
+   
 2. The workflow is already configured in `.github/workflows/listmonk_rss.yml`
-   - Runs on Weekdays at 8:00 UTC
-   - Persists state between runs using GitHub repository variables (LAST_UPDATE)
-   - Uses GitHub API to store and retrieve the last processed timestamp
-   - Automatically creates and schedules newsletters
+   and does the following:
+   - Runs on Weekdays at 8:00 UTC, change the cron schedule as you want.
+   - Persists state between runs using the repository variable (`LAST_UPDATE`),
+     Uses GitHub API to store and retrieve the last processed timestamp
+   - Automatically creates and schedules newsletters based on the Python
+     script.
 
 3. To manually trigger the workflow:
    - Go to Actions → Listmonk RSS
    - Click "Run workflow"
 
-You should run the trigger manually for the first time so that the state can be
-saved (make sure you delete the campaign on your Listmonk instance if you don't
-want your subscribers to get an email with all existing items). Running the
-workflow for the first time will show an error that it wasn't able to find the
-artifact - that's expected.
 
 <details>
 <summary>
     
-### Screenshot "Repository Secrets"
+#### Screenshot "Repository Secrets"
     
 </summary>
 
@@ -154,12 +159,12 @@ Edit `template.md.j2` to customize your newsletter format. The template uses Jin
 
 This repo is inspired by
 [rss2newsletter](https://github.com/ElliotKillick/rss2newsletter), but I wanted
-a solution that runs without a dedicated server (other than GitHub's
-infrastructure, of course).
+a solution that runs without setting up a dedicated server, it just needs the
+Listmonk instance and GitHub.
 
-Contributions are welcome, but there's no guarantee that I will be able to act
-on them. I use this mostly for my own purposes. My advice would be to fork it
-and adjust it to your needs.
+Contributions are welcome, but there's no guarantee that I will have the
+resources to act on them. I use this repo mostly for my own purposes. My advice
+would be to fork it and adjust it to your needs.
 
 ## Contact
 
