@@ -230,7 +230,7 @@ def main(dry_run: bool):
     
     # Update last update time
     if success:
-        save_last_update(datetime.now(), state_file)
+        save_last_update(datetime.now())
 
 
 if __name__ == "__main__":
