@@ -33,8 +33,8 @@ def get_opengraph_data(url):
 
 def get_last_update() -> datetime:
     """Get the last update timestamp from GitHub repo variable."""
-    github_token = os.getenv("GITHUB_TOKEN")
-    repo = os.getenv("GITHUB_REPOSITORY")
+    github_token = os.getenv("GH_TOKEN")
+    repo = os.getenv("GH_REPOSITORY")
     url = f"https://api.github.com/repos/{repo}/actions/variables/LAST_UPDATE"
     
     headers = {
@@ -56,8 +56,8 @@ def get_last_update() -> datetime:
 
 def save_last_update(timestamp: datetime):
     """Save the last update timestamp to GitHub repo variable."""
-    github_token = os.getenv("GITHUB_TOKEN")
-    repo = os.getenv("GITHUB_REPOSITORY")
+    github_token = os.getenv("GH_TOKEN")
+    repo = os.getenv("GH_REPOSITORY")
     url = f"https://api.github.com/repos/{repo}/actions/variables/LAST_UPDATE"
     
     headers = {
@@ -199,8 +199,7 @@ def main(dry_run: bool):
     items = fetch_rss_feed(os.getenv("RSS_FEED"), last_update)
     
     if not items:
-        print("No new items found.")
-        save_last_update(datetime.now())
+        print(f"No new items found, I keep the update as {last_update}.")
         return
     
     # Create campaign content
