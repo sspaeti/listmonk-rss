@@ -1,7 +1,9 @@
 # Listmonk RSS Newsletter Automation
 
-Automatically send newsletters from RSS feeds using
-[Listmonk](https://listmonk.app) and GitHub Actions.
+Automatically send newsletters from RSS feeds using [Listmonk (open
+source)](https://listmonk.app) and GitHub Actions (and save $$$ compared to
+[Mailchimp](https://mailchimp.com/features/rss-to-email/) or other newsletter
+providers.
 
 ## Features
 
@@ -37,10 +39,14 @@ Automatically send newsletters from RSS feeds using
    ```bash
    LISTMONK_API_USER=<your_api_user>
    LISTMONK_API_TOKEN=<your_api_token>
-   LISTMONK_HOST=https://your.listmonk.instance
-   LIST_NAME=<your_list_name>
-   RSS_FEED=https://your.rss.feed/url
-   DELAY_SEND_MINS=30
+
+   GH_TOKEN=<your github api token>
+   GH_REPOSITORY=<yourusername>/listmonk-rss
+
+   LISTMONK_HOST=<your-listmonk-instance>
+   LIST_NAME=<Name of your Listmonk list as it shows in the interface>
+   RSS_FEED=<your RSS feed>
+   DELAY_SEND_MINS=45
    ```
 
 4. Test the script locally:
@@ -58,11 +64,23 @@ To receive notifications when newsletters are scheduled (this gives you an
 3. Get your User Key from the Pushover dashboard
 4. Create an Application/API Token
 
+Set the env variables:
+
+```bash
+PUSHOVER_USER_KEY=<your-pushover-user-key>
+PUSHOVER_API_TOKEN=<your-pushover-api-token>
+```
+
 ### 3. GitHub Actions Setup
 
-1. Create a GitHub Personal Access Token with `repo` scope at https://github.com/settings/tokens
+1. Create a GitHub Personal Access Token with `repo` scope at
+   <https://github.com/settings/tokens>, make sure that you have the following
+   permission set: *"Variables" repository permissions (write)* (we need to
+   send an [API call to update a repository
+   variable](https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#update-a-repository-variable)).
 
-2. Add your `.env` file contents, Pushover credentials, and GitHub token as GitHub Secrets in your repository:
+2. Add your `.env` file contents, Pushover credentials, and GitHub token as
+   GitHub Secrets in your repository (see screenshots below):
    - Go to Settings → Secrets and variables → Actions
    - Add each environment variable as a new repository secret
 
@@ -81,6 +99,13 @@ saved (make sure you delete the campaign on your Listmonk instance if you don't
 want your subscribers to get an email with all existing items). Running the
 workflow for the first time will show an error that it wasn't able to find the
 artifact - that's expected.
+
+#### Repository Secrets
+![](attachments/2025-02-07_18-25-19.png)
+
+#### Repository Variables
+![](attachments/2025-02-07_18-26-12.png)
+
 
 ## Configuration
 
@@ -110,11 +135,16 @@ Edit `template.md.j2` to customize your newsletter format. The template uses Jin
   - `media_content`: OpenGraph image URL
 
 
-## Contributing
+## Related work and Contributing
 
-Contributions are welcome, but there's no guarantee that I will be able to act on them. I
-use this mostly for my own purposes. My advice would be to fork it and
-adjust it to your needs.
+This repo is inspired by
+[rss2newsletter](https://github.com/ElliotKillick/rss2newsletter), but I wanted
+a solution that runs without a dedicated server (other than GitHub's
+infrastructure, of course).
+
+Contributions are welcome, but there's no guarantee that I will be able to act
+on them. I use this mostly for my own purposes. My advice would be to fork it
+and adjust it to your needs.
 
 ## Contact
 
