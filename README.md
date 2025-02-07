@@ -51,7 +51,8 @@ Automatically send newsletters from RSS feeds using
 
 ### 2. Pushover Notifications (Optional)
 
-To receive notifications when newsletters are scheduled:
+To receive notifications when newsletters are scheduled (this gives you an
+  opportunity to review the content before it is sent out):
 
 1. Create a Pushover account at https://pushover.net
 2. Install the Pushover app on your devices
