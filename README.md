@@ -5,8 +5,7 @@ Automatically send newsletters from RSS feeds using
 
 ## Features
 
-- Receive push notifications when newsletters are scheduled (this gives you an
-  opportunity to review the content before it is sent out)
+- Receive push notifications when newsletters are scheduled 
 - Automatically fetch new items from RSS feeds
 - Create newsletters based on a Markdown template
 - Schedule newsletters with new items with configurable delay
