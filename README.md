@@ -60,13 +60,16 @@ To receive notifications when newsletters are scheduled (this gives you an
 
 ### 3. GitHub Actions Setup
 
-1. Add your `.env` file contents and Pushover credentials as GitHub Secrets in your repository:
+1. Create a GitHub Personal Access Token with `repo` scope at https://github.com/settings/tokens
+
+2. Add your `.env` file contents, Pushover credentials, and GitHub token as GitHub Secrets in your repository:
    - Go to Settings → Secrets and variables → Actions
    - Add each environment variable as a new repository secret
 
 2. The workflow is already configured in `.github/workflows/listmonk_rss.yml`
    - Runs on Weekdays at 8:00 UTC
-   - Persists state between runs using GitHub repository variables
+   - Persists state between runs using GitHub repository variables (LAST_UPDATE)
+   - Uses GitHub API to store and retrieve the last processed timestamp
    - Automatically creates and schedules newsletters
 
 3. To manually trigger the workflow:
@@ -93,6 +96,8 @@ artifact - that's expected.
 | DELAY_SEND_MINS        | Minutes to delay sending after creation (default: 30) | No       |
 | PUSHOVER_USER_KEY     | Pushover user key for notifications (optional)   | No       |
 | PUSHOVER_API_TOKEN    | Pushover API token for notifications (optional)  | No       |
+| GH_REPOSITORY         | GitHub repository in "owner/repo" format        | Yes      |
+| GH_TOKEN              | GitHub token with repo scope for state storage  | Yes      |
 
 ### Template Customization
 
