@@ -1,0 +1,22 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Listmonk RSS Newsletter Automation - System Context
+
+Person(user, "Newsletter Subscriber", "Receives newsletters via email")
+System(listmonk, "Listmonk", "Email newsletter management system")
+System(rss_feed, "RSS Feed", "Source of content for newsletters")
+System(github_actions, "GitHub Actions", "Automation platform for scheduling and running the newsletter creation")
+System(pushover, "Pushover", "Notification service for status updates")
+
+System_Boundary(system, "Newsletter Automation System") {
+    Container(script, "Python Script", "python", "Fetches RSS feed, creates and schedules newsletters")
+}
+
+Rel(user, listmonk, "Receives newsletters", "SMTP")
+Rel(script, listmonk, "Creates and schedules campaigns", "HTTP API")
+Rel(script, rss_feed, "Fetches new content", "HTTP")
+Rel(github_actions, script, "Triggers and runs", "GitHub Actions")
+Rel(script, pushover, "Sends status notifications", "HTTP API")
+
+@enduml
