@@ -68,6 +68,10 @@ To receive notifications when newsletters are scheduled:
    - Go to Actions → Listmonk RSS
    - Click "Run workflow"
 
+You should run the trigger manually for the first time so that the state can be
+saved (make sure you delete the campaign on your listmonk instance if you don't
+want your subscribers to get a mail with all existing items).
+
 ## Configuration
 
 ### Environment Variables
