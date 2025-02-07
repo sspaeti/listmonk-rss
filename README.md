@@ -5,7 +5,8 @@ Automatically send newsletters from RSS feeds using
 
 ## Features
 
-- Receive push notifications when newsletters are scheduled
+- Receive push notifications when newsletters are scheduled (this gives you an
+  opportunity to review the content before it is sent out)
 - Automatically fetch new items from RSS feeds
 - Create newsletters based on a Markdown template 
 - Schedule newsletters with new items with configurable delay
@@ -106,5 +107,10 @@ Edit `template.md.j2` to customize your newsletter format. The template uses Jin
 
 ## Contributing
 
-Contributions are welcome, but noz guarantee that I will react. I use this
-mostly for my own purpose.
+Contributions are welcome, but no guarantee that I will be able to act on it. I
+use this mostly for my own purpose. My advice would be to fork it and use
+adjust it to your needs.
+
+## Contact
+
+You may want to subscribe to [my blog](https://blog.heuel.org) 😃.
