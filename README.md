@@ -100,12 +100,27 @@ want your subscribers to get an email with all existing items). Running the
 workflow for the first time will show an error that it wasn't able to find the
 artifact - that's expected.
 
-#### Repository Secrets
+<details>
+<summary>
+    
+### Screenshot "Repository Secrets"
+    
+</summary>
+
 ![](attachments/2025-02-07_18-25-19.png)
 
-#### Repository Variables
+</details>
+
+<details>
+<summary>
+    
+#### Screenshot "Repository Variables"
+
+</summary>
+
 ![](attachments/2025-02-07_18-26-12.png)
 
+</details>
 
 ## Configuration
 
