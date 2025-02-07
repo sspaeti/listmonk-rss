@@ -20,7 +20,7 @@ Automatically send newsletters from RSS feeds using
 
 ## Diagram
 
-![Architecture](assets/C4/Architecture.png)
+![Architecture](assets/C4/architecture.png)
 
 ## Setup
 
