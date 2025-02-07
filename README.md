@@ -1,8 +1,8 @@
-# Linkmonk RSS
+# Listmonk RSS
 
 ## About
 
-This is an extension to Linkmonk to send out campaigns for RSS updates. 
+This is an extension to Listmonk to send out campaigns for RSS updates. 
 
 ## Requirements
 

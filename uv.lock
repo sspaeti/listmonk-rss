@@ -129,7 +129,7 @@ wheels = [
 ]
 
 [[package]]
-name = "linkmonk-rss"
+name = "listmonk-rss"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

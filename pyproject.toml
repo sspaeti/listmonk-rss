@@ -1,5 +1,5 @@
 [project]
-name = "linkmonk-rss"
+name = "listmonk-rss"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"

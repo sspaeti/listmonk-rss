@@ -9,12 +9,14 @@ from jinja2 import Template
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 import click
+import logging
+
+logging.basicConfig(level=logging.INFO)  # Set to DEBUG, INFO, WARNING, ERROR, or CRITICAL
 
 # Load environment variables
 load_dotenv()
 
 # Constants
-STATE_FILE = Path("last_update.json")
 TEMPLATE_FILE = Path("template.md.j2")
 
 def get_opengraph_data(url):
@@ -29,18 +31,23 @@ def get_opengraph_data(url):
     return og_data
 
 
-def load_last_update() -> datetime:
+def load_last_update(state_file: str) -> datetime:
     """Load the last update timestamp from the state file."""
-    if STATE_FILE.exists():
-        with open(STATE_FILE, "r") as f:
+    result = datetime.min
+    state_path = Path(state_file)
+    if state_path.exists():
+        with open(state_path, "r") as f:
             data = json.load(f)
-            return datetime.fromisoformat(data["last_update"])
-    return datetime.min
+            result = datetime.fromisoformat(data["last_update"])
+    logging.info(f"found last date {result}")
+    return result
 
 
-def save_last_update(timestamp: datetime):
+def save_last_update(timestamp: datetime, state_file: str):
     """Save the last update timestamp to the state file."""
-    with open(STATE_FILE, "w") as f:
+    state_path = Path(state_file)
+    logging.info(f"save {timestamp} to {state_file}")
+    with open(state_path, "w") as f:
         json.dump({"last_update": timestamp.isoformat()}, f)
 
 
@@ -48,7 +55,8 @@ def fetch_rss_feed(feed_url: str, last_update: datetime) -> list:
     """Fetch and parse RSS feed, returning new items since last update."""
     feed = feedparser.parse(feed_url)
     new_items = []
-    for entry in feed.entries:
+    logging.info(f"There are in total {len(feed.entries)} entries for {feed_url}")
+    for entry in feed.entries:        
         if datetime(*entry.published_parsed[:6]) > last_update:
             og = get_opengraph_data(entry.link)
             if og.get("image"):
@@ -59,7 +67,7 @@ def fetch_rss_feed(feed_url: str, last_update: datetime) -> list:
 
 
 def get_list_id(host: str, api_user: str, api_token: str, list_name: str) -> int:
-    """Get list ID from list name using Linkmonk API."""
+    """Get list ID from list name using Listmonk API."""
     url = f"{host}/api/lists"
     auth=(api_user, api_token)
     headers = {
@@ -133,22 +141,43 @@ def send_campaign(host: str, api_user: str, api_token: str, list_id: int, conten
 
         print(f"Campaign {campaign_id} successfully scheduled with {delay_mins} mins delay!")
 
+        # Send Pushover notification
+        pushover_user_key = os.getenv("PUSHOVER_USER_KEY")
+        pushover_api_token = os.getenv("PUSHOVER_API_TOKEN")
+
+        if pushover_user_key and pushover_api_token:
+            response = httpx.post(
+                "https://api.pushover.net/1/messages.json",
+                data={
+                    "token": pushover_api_token,
+                    "user": pushover_user_key,
+                    "message": f"A new campaign has been successfully scheduled with {delay_mins} mins delay! Check if you want to review this before sending.",
+                    "title": "Newsletter for your blog"
+                },
+                headers={"Content-type": "application/x-www-form-urlencoded"}
+            )
+            response.raise_for_status()
+
     return True
 
 @click.command()
 @click.option("--dry-run", is_flag=True, help="Run without sending campaign")
-def main(dry_run: bool):
+@click.option("--state-file", default="last_update.json", 
+              help="Path to JSON file storing last update timestamp")
+def main(dry_run: bool, state_file: str):
+    assert os.getenv("RSS_FEED"), "No RSS feed given"
     # Load template
     template = Template(TEMPLATE_FILE.read_text())
     
     # Get last update time
-    last_update = load_last_update()
+    last_update = load_last_update(state_file)
     
     # Fetch new RSS items
     items = fetch_rss_feed(os.getenv("RSS_FEED"), last_update)
     
     if not items:
         print("No new items found.")
+        save_last_update(datetime.now(), state_file)
         return
     
     # Create campaign content
@@ -161,24 +190,24 @@ def main(dry_run: bool):
     
     # Get list ID
     list_id = get_list_id(
-        host=os.getenv("LINKMONK_HOST"),
-        api_user=os.getenv("LINKMONK_API_USER"),
-        api_token=os.getenv("LINKMONK_API_TOKEN"),
+        host=os.getenv("LISTMONK_HOST"),
+        api_user=os.getenv("LISTMONK_API_USER"),
+        api_token=os.getenv("LISTMONK_API_TOKEN"),
         list_name=os.getenv("LIST_NAME")
     )
     
     # Send campaign
     success = send_campaign(
-        host=os.getenv("LINKMONK_HOST"),
-        api_user=os.getenv("LINKMONK_API_USER"),
-        api_token=os.getenv("LINKMONK_API_TOKEN"),
+        host=os.getenv("LISTMONK_HOST"),
+        api_user=os.getenv("LISTMONK_API_USER"),
+        api_token=os.getenv("LISTMONK_API_TOKEN"),
         list_id=list_id,
         content=content
     )
     
     # Update last update time
     if success:
-        save_last_update(datetime.now())
+        save_last_update(datetime.now(), state_file)
 
 
 if __name__ == "__main__":

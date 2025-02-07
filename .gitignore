@@ -11,3 +11,4 @@ wheels/
 .aider*
 .env
 last_update.json
+/.python-version
