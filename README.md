@@ -1,43 +1,100 @@
-# Listmonk RSS
+# Listmonk RSS Newsletter Automation
 
-## About
+Automatically send newsletters from RSS feeds using
+[Listmonk](https://listmonk.app) and GitHub Actions.
 
-This is an extension to Listmonk to send out campaigns for RSS updates. 
+## Features
+
+- Receive push notifications when newsletters are scheduled
+- Automatically fetch new items from RSS feeds
+- Create newsletters based on a Markdown template 
+- Schedule newsletters with new items with configurable delay
+- GitHub Actions integration for automated scheduling
 
 ## Requirements
 
-- A running and publicly available Linkmonk instance (for example deployed with
-  PikaPods).
-- A GitHub account and a fork of this repository.
-- An RSS feed to consume. 
+- A running Listmonk instance (e.g., deployed with
+  [PikaPods](https://www.pikapods.com).
+- GitHub account and a version of this repository
+- An existing RSS feed URL, obviously
 
-## Technical details
+## Setup
 
-This is a Python script that takes advantage of [Linkmonk's
-API](https://listmonk.app/docs/apis/apis) to create a campaign This is [similar
-to this Python
-script](https://github.com/ElliotKillick/rss2newsletter/blob/main/rss2newsletter),
-but written from scratch.
+### 1. Local Setup
 
-The parameters will be in a `.env` that is read by `python-dotenv`. 
-We use a Jinja2 template file for the template of the campaign newsletter.
+1. Fork this repository, so that you can setup your own schedule and clone it.
 
-You can run this python script locally on your machine and deploy it with a
-GitHub action. 
+2. Install dependencies using uv:
+   ```bash
+   uv sync -U
+   ```
 
-To persist the state of the last date of the RSS feed update, a JSON file with
-a timestamp is stored. If it is run on GitHub, we use actions/upload-artifact
-and actions/download-artifact to store the state.
+3. Create a `.env` file with your configuration:
+   ```bash
+   LISTMONK_API_USER=<your_api_user>
+   LISTMONK_API_TOKEN=<your_api_token>
+   LISTMONK_HOST=https://your.listmonk.instance
+   LIST_NAME=<your_list_name>
+   RSS_FEED=https://your.rss.feed/url
+   SEND_DELAY=30
+   ```
 
-The Python library management is done with `uv` using `pyproject.toml`. We run
-the script with `uv run linkmonk_rss.py`. 
+4. Test the script locally:
+   ```bash
+   make create_campaign
+   ```
 
-```
-LINKMONK_API_USER=<the name of the API user in linkmonk>
-LINKMONK_API_TOKEN=<YOURSECRETAPIKEY>
-LINKMONK_HOST=https://yourlinkmonkhost.com
-LIST_NAME=<The name of the list in LinkMonk>
-RSS_FEED=https://blog.heuel.org/feeds/all.atom.xml
-SEND_DELAY=45
-```
+### 2. Pushover Notifications (Optional)
 
+To receive notifications when newsletters are scheduled:
+
+1. Create a Pushover account at https://pushover.net
+2. Install the Pushover app on your devices
+3. Get your User Key from the Pushover dashboard
+4. Create an Application/API Token
+
+### 3. GitHub Actions Setup
+
+1. Add your `.env` file contents and Pushover credentials as GitHub Secrets in your repository:
+   - Go to Settings → Secrets and variables → Actions
+   - Add each environment variable as a new repository secret
+
+2. The workflow is already configured in `.github/workflows/listmonk_rss.yml`
+   - Runs on Weekdays at 8:00 UTC
+   - Persists state between runs using GitHub Actions artifacts
+   - Automatically creates and schedules newsletters
+
+3. To manually trigger the workflow:
+   - Go to Actions → Listmonk RSS
+   - Click "Run workflow"
+
+## Configuration
+
+### Environment Variables
+
+| Variable              | Description                                      | Required |
+|-----------------------|--------------------------------------------------|----------|
+| LISTMONK_API_USER     | Listmonk API username                            | Yes      |
+| LISTMONK_API_TOKEN    | Listmonk API token                               | Yes      |
+| LISTMONK_HOST         | Listmonk instance URL                            | Yes      |
+| LIST_NAME             | Name of the mailing list in Listmonk             | Yes      |
+| RSS_FEED              | URL of the RSS feed to monitor                   | Yes      |
+| SEND_DELAY            | Minutes to delay sending after creation (default: 30) | No       |
+| PUSHOVER_USER_KEY     | Pushover user key for notifications (optional)   | No       |
+| PUSHOVER_API_TOKEN    | Pushover API token for notifications (optional)  | No       |
+
+### Template Customization
+
+Edit `template.md.j2` to customize your newsletter format. The template uses Jinja2 syntax and has access to:
+
+- `items`: List of RSS feed items with:
+  - `title`: Article title
+  - `link`: Article URL
+  - `summary`: Article summary
+  - `media_content`: OpenGraph image URL
+
+
+## Contributing
+
+Contributions are welcome, but noz guarantee that I will react. I use this
+mostly for my own purpose.
