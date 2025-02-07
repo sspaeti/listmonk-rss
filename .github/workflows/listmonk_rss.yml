@@ -39,7 +39,7 @@ jobs:
         PUSHOVER_API_TOKEN: ${{ secrets.PUSHOVER_API_TOKEN }}
         LISTMONK_HOST: ${{ vars.LISTMONK_HOST }}
         LIST_NAME: ${{ vars.LIST_NAME }}
-        SEND_DELAY: ${{ vars.SEND_DELAY }}
+        DELAY_SEND_MINS: ${{ vars.DELAY_SEND_MINS }}
         
     - name: Upload last update artifact
       uses: actions/upload-artifact@v4

@@ -41,7 +41,7 @@ Automatically send newsletters from RSS feeds using
    LISTMONK_HOST=https://your.listmonk.instance
    LIST_NAME=<your_list_name>
    RSS_FEED=https://your.rss.feed/url
-   SEND_DELAY=30
+   DELAY_SEND_MINS=30
    ```
 
 4. Test the script locally:
@@ -90,7 +90,7 @@ artefact, that's fine.
 | LISTMONK_HOST         | Listmonk instance URL                            | Yes      |
 | LIST_NAME             | Name of the mailing list in Listmonk             | Yes      |
 | RSS_FEED              | URL of the RSS feed to monitor                   | Yes      |
-| SEND_DELAY            | Minutes to delay sending after creation (default: 30) | No       |
+| DELAY_SEND_MINS        | Minutes to delay sending after creation (default: 30) | No       |
 | PUSHOVER_USER_KEY     | Pushover user key for notifications (optional)   | No       |
 | PUSHOVER_API_TOKEN    | Pushover API token for notifications (optional)  | No       |
 

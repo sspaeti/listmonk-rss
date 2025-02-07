@@ -105,7 +105,7 @@ def send_campaign(host: str, api_user: str, api_token: str, list_id: int, conten
 
     # for the send time, we assume that the linkmonk server runs in UTC (this
     # is what the default in PikaPods are)
-    delay_mins = int(os.getenv("SEND_DELAY", 30))
+    delay_mins = int(os.getenv("DELAY_SEND_MINS", 30))
     send_datetime = datetime.now(timezone.utc) + timedelta(minutes=delay_mins)
     send_datetime = send_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
     data = {
