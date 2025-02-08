@@ -18,9 +18,6 @@ $(PLANTUML_DIAGRAMS_PNG): %.png: %.puml
 create_campaign: 	## check for new items in your feed and create a campaign 
 	uv run listmonk_rss.py
 
-clean:		        ## delete latest state of items already seen
-	rm last_update.json
-
 github_workflow:   	## test github workflow using act
 	act workflow_dispatch --secret-file .env --var-file .env --container-architecture linux/amd64 --artifact-server-path /tmp/artifacts
 
