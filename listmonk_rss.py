@@ -118,7 +118,7 @@ def create_campaign_content(items: list, template: Template) -> str:
 
 
 def send_campaign(host: str, api_user: str, api_token: str, list_id: int, content: str):
-    """Send campaign using Linkmonk API."""
+    """Send campaign using Listmonk API."""
     url = f"{host}/api/campaigns"
     auth=(api_user, api_token)
     headers = {

@@ -1,7 +1,7 @@
 all:	help
 
 help:		## output help for all targets
-	@echo "Local run for creating campaigns using Linkmonk"
+	@echo "Local run for creating campaigns using Listmonk"
 	@echo "see README.md for details"
 	@echo 
 	@awk 'BEGIN {FS = ":.*?## "}; \
