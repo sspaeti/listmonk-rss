@@ -48,19 +48,19 @@ providers.
 
 5. Create a `.env` file with your configuration:
    ```bash
+   LISTMONK_HOST=<your-listmonk-instance>
+   LIST_NAME=<Name of your Listmonk list as it shows in the interface>
    LISTMONK_API_USER=<your_api_user>
    LISTMONK_API_TOKEN=<your_api_token>
 
    GH_TOKEN=<your github api token>
    GH_REPOSITORY=<yourusername>/listmonk-rss
 
-   LISTMONK_HOST=<your-listmonk-instance>
-   LIST_NAME=<Name of your Listmonk list as it shows in the interface>
-   RSS_FEED=<your RSS feed>
+   RSS_FEED=<your RSS feed URL>
    DELAY_SEND_MINS=45
    ```
 
-6. Test the script locally with the environment variable beloe:
+6. Test the script locally with the environment variable below:
    ```bash
    make create_campaign
    ```
@@ -84,7 +84,7 @@ PUSHOVER_API_TOKEN=<your-pushover-api-token>
 
 ### 3. GitHub Actions Setup
 
-Once you have setup and tested everything locally, you can move
+Once you have setup and tested everything locally, you can move it to GitHub:
 
 1. Add your `.env` file contents, Pushover credentials, and GitHub token as
    GitHub Secrets and Environment variables in your repository (see screenshots
@@ -100,9 +100,10 @@ Once you have setup and tested everything locally, you can move
    - Automatically creates and schedules newsletters based on the Python
      script.
 
-3. To manually trigger the workflow:
+3. To manually trigger the workflow for testing:
    - Go to Actions → Listmonk RSS
    - Click "Run workflow"
+   - Check in Listmonk whether the draft campaign has been created
 
 
 <details>
