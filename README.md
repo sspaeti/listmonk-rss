@@ -14,6 +14,7 @@ providers.
   edit the draft
 - GitHub Actions integration for automated scheduling without the need for
   running a server
+- Dry run mode to test campaign creation without scheduling or updating state
 
 ## Requirements
 
@@ -64,6 +65,19 @@ providers.
    ```bash
    make create_campaign
    ```
+
+### Dry Run Mode
+
+To test the script without actually scheduling a campaign or updating the last update timestamp:
+
+```bash
+make dry_run
+```
+
+This will:
+- Create a campaign draft scheduled 10 years in the future
+- Not update the LAST_UPDATE timestamp
+- Allow you to review the campaign content in Listmonk
 
 ### 2. Pushover Notifications (Optional)
 
@@ -139,7 +153,7 @@ Once you have setup and tested everything locally, you can move it to GitHub:
 | LISTMONK_HOST         | Listmonk instance URL                            | Yes      |
 | LIST_NAME             | Name of the mailing list in Listmonk             | Yes      |
 | RSS_FEED              | URL of the RSS feed to monitor                   | Yes      |
-| DELAY_SEND_MINS        | Minutes to delay sending after creation (default: 30) | No       |
+| DELAY_SEND_MINS        | Minutes to delay sending after creation (default: 30). In dry run mode, this is set to 10 years. | No       |
 | PUSHOVER_USER_KEY     | Pushover user key for notifications (optional)   | No       |
 | PUSHOVER_API_TOKEN    | Pushover API token for notifications (optional)  | No       |
 | GH_REPOSITORY         | GitHub repository in "owner/repo" format        | Yes      |

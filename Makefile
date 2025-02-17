@@ -16,7 +16,10 @@ $(PLANTUML_DIAGRAMS_PNG): %.png: %.puml
 	plantuml $<
 
 create_campaign: 	## check for new items in your feed and create a campaign 
-	uv run listmonk_rss.py
+	uv run listmonk_rss.py 
+
+dry_run: 	## check for new items in your feed and create a campaign 
+	uv run listmonk_rss.py --dry-run
 
 github_workflow:   	## test github workflow using act
 	act workflow_dispatch --secret-file .env --var-file .env --container-architecture linux/amd64 --artifact-server-path /tmp/artifacts

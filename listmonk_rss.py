@@ -117,8 +117,8 @@ def create_campaign_content(items: list, template: Template) -> str:
     return template.render(items=items)
 
 
-def send_campaign(host: str, api_user: str, api_token: str, list_id: int, content: str, subject: str):
-    """Send campaign using Listmonk API."""
+def schedule_campaign(host: str, api_user: str, api_token: str, list_id: int, content: str, subject: str, dry_run: bool = False):
+    """Send campaign draft using Listmonk API."""
     url = f"{host}/api/campaigns"
     auth=(api_user, api_token)
     headers = {
@@ -128,7 +128,13 @@ def send_campaign(host: str, api_user: str, api_token: str, list_id: int, conten
 
     # for the send time, we assume that the linkmonk server runs in UTC (this
     # is what the default in PikaPods are)
-    delay_mins = int(os.getenv("DELAY_SEND_MINS", 30))
+    if dry_run:
+        # Set delay to 10 years for dry run
+        print("*** This is a dry run, the campaign is scheduled 10 years in the future")
+        delay_mins = 365 * 24 * 60 * 10
+    else:
+        delay_mins = int(os.getenv("DELAY_SEND_MINS", 30))
+        
     send_datetime = datetime.now(timezone.utc) + timedelta(minutes=delay_mins)
     send_datetime = send_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
     data = {
@@ -186,8 +192,12 @@ def send_campaign(host: str, api_user: str, api_token: str, list_id: int, conten
     return True
 
 @click.command()
-@click.option("--dry-run", is_flag=True, help="Create draft campaign, but with a delay of years.")
+@click.option("--dry-run", is_flag=True, help="Create draft campaign with a 10-year delay and don't update last update time.")
 def main(dry_run: bool):
+    if dry_run:
+        print("*** This is a dry run")
+
+
     assert os.getenv("RSS_FEED"), "No RSS feed given"
     # Load template
     template = Template(TEMPLATE_FILE.read_text())
@@ -199,17 +209,12 @@ def main(dry_run: bool):
     items = fetch_rss_feed(os.getenv("RSS_FEED"), last_update)
     
     if not items:
-        print(f"No new items found, I keep the update as {last_update}.")
+        print(f"No new items found, I keep the update as of my last state '{last_update}' (UTC) in GitHub.")
         return
     
     # Create campaign content
     content = create_campaign_content(items, template)
-    
-    if dry_run:
-        print("Dry run - would send campaign with content:")
-        print(content)
-        return
-    
+        
     # Get list ID
     list_id = get_list_id(
         host=os.getenv("LISTMONK_HOST"),
@@ -218,19 +223,24 @@ def main(dry_run: bool):
         list_name=os.getenv("LIST_NAME")
     )
     
-    # Send campaign
-    success = send_campaign(
+    # Schedule campaign 
+    success = schedule_campaign(
         host=os.getenv("LISTMONK_HOST"),
         api_user=os.getenv("LISTMONK_API_USER"),
         api_token=os.getenv("LISTMONK_API_TOKEN"),
         list_id=list_id,
         content=content,
-        subject=os.getenv("LIST_NAME")
+        subject=os.getenv("LIST_NAME"),
+        dry_run=dry_run
     )
     
-    # Update last update time
-    if success:
+    # Update last update time only if not dry run and successful
+    if success and not dry_run:
         save_last_update(datetime.now())
+    elif dry_run:
+        print("*** This is a dry run, I don't update the last_save state")
+    elif not success:
+        print("*** Something went wrong with scheduling the campaign")
 
 
 if __name__ == "__main__":
