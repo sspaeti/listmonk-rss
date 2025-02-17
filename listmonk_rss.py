@@ -117,7 +117,7 @@ def create_campaign_content(items: list, template: Template) -> str:
     return template.render(items=items)
 
 
-def send_campaign(host: str, api_user: str, api_token: str, list_id: int, content: str):
+def send_campaign(host: str, api_user: str, api_token: str, list_id: int, content: str, subject: str):
     """Send campaign using Listmonk API."""
     url = f"{host}/api/campaigns"
     auth=(api_user, api_token)
@@ -133,7 +133,7 @@ def send_campaign(host: str, api_user: str, api_token: str, list_id: int, conten
     send_datetime = send_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
     data = {
         "name" : f"RSS Update Newsletter, {current_datetime}",
-        "subject": "Latest Updates from RSS Feed",
+        "subject": subject,
         "lists": [list_id],
         "body": content,
         "content_type": "markdown",
@@ -186,7 +186,7 @@ def send_campaign(host: str, api_user: str, api_token: str, list_id: int, conten
     return True
 
 @click.command()
-@click.option("--dry-run", is_flag=True, help="Run without sending campaign")
+@click.option("--dry-run", is_flag=True, help="Create draft campaign, but with a delay of years.")
 def main(dry_run: bool):
     assert os.getenv("RSS_FEED"), "No RSS feed given"
     # Load template
@@ -224,7 +224,8 @@ def main(dry_run: bool):
         api_user=os.getenv("LISTMONK_API_USER"),
         api_token=os.getenv("LISTMONK_API_TOKEN"),
         list_id=list_id,
-        content=content
+        content=content,
+        subject=os.getenv("LIST_NAME")
     )
     
     # Update last update time
