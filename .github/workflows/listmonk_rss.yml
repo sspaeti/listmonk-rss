@@ -2,7 +2,7 @@ name: Listmonk RSS Campaign
 
 on:
   schedule:
-    - cron: '0 8 * * 3'  # Run every Wednesday at 8:00 AM
+    - cron: '30 10 * * 4'  # Run every Thursday at 10:30 AM
   workflow_dispatch:
 
 jobs:
