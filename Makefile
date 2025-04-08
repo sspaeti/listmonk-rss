@@ -12,6 +12,9 @@ help:		## output help for all targets
 PLANTUML_DIAGRAMS=$(shell echo assets/C4/*.puml)
 PLANTUML_DIAGRAMS_PNG=$(PLANTUML_DIAGRAMS:.puml=.png)
 
+install:
+	uv sync -U
+
 $(PLANTUML_DIAGRAMS_PNG): %.png: %.puml
 	plantuml $<
 
