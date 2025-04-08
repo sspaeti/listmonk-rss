@@ -230,7 +230,7 @@ def main(dry_run: bool):
         api_token=os.getenv("LISTMONK_API_TOKEN"),
         list_id=list_id,
         content=content,
-        subject=os.getenv("LIST_NAME"),
+        subject=os.getenv("SUBJECT_NAME"),
         dry_run=dry_run
     )
     
