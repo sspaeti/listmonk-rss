@@ -114,7 +114,12 @@ def get_list_id(host: str, api_user: str, api_token: str, list_name: str) -> int
 
 def create_campaign_content(items: list, template: Template) -> str:
     """Generate campaign content using Jinja2 template."""
-    return template.render(items=items)
+    content = template.render(items=items)
+    # Escape Go template syntax for Listmonk (which uses {{ }} for variables)
+    # Use HTML entities to prevent Listmonk from parsing Hugo shortcodes as templates
+    content = content.replace('{{', '&#123;&#123;')
+    content = content.replace('}}', '&#125;&#125;')
+    return content
 
 
 def schedule_campaign(host: str, api_user: str, api_token: str, list_id: int, content: str, subject: str, dry_run: bool = False):
@@ -146,9 +151,15 @@ def schedule_campaign(host: str, api_user: str, api_token: str, list_id: int, co
         "type": "regular",
         "send_at" : send_datetime
     }
-    
+
+    # Debug logging (only visible when log level is DEBUG)
+    logging.debug(f"Creating campaign with payload: {json.dumps({k: v if k != 'body' else f'{v[:100]}...' for k, v in data.items()}, indent=2)}")
+
     with httpx.Client() as client:
         response = client.post(url, json=data, headers=headers,auth=auth)
+        if response.status_code != 200:
+            logging.error(f"Campaign creation failed with status {response.status_code}")
+            logging.error(f"Response body: {response.text}")
         response.raise_for_status()
 
         parsed = response.json()
