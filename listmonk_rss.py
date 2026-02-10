@@ -19,6 +19,26 @@ load_dotenv()
 # Constants
 TEMPLATE_FILE = Path("template.md.j2")
 
+def truncate_to_intro(content: str, link: str) -> str:
+    """Truncate content to everything before the first heading (h2 or ##)."""
+    # Try HTML <h2> first (RSS feeds typically contain HTML)
+    h2_pos = content.lower().find('<h2')
+    if h2_pos > 0:
+        content = content[:h2_pos].rstrip()
+    else:
+        # Try markdown ## heading
+        lines = content.split('\n')
+        truncated_lines = []
+        for line in lines:
+            if line.strip().startswith('## '):
+                break
+            truncated_lines.append(line)
+        content = '\n'.join(truncated_lines).rstrip()
+
+    content += f'\n\n[Continue reading...]({link})'
+    return content
+
+
 def get_opengraph_data(url):
     response = httpx.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
@@ -86,6 +106,7 @@ def fetch_rss_feed(feed_url: str, last_update: datetime) -> list:
             og = get_opengraph_data(entry.link)
             if og.get("image"):
                 entry.media_content=og.get("image")
+            entry.summary = truncate_to_intro(entry.summary, entry.link)
             new_items.append(entry)
 
     return new_items
@@ -225,7 +246,11 @@ def main(dry_run: bool):
     
     # Create campaign content
     content = create_campaign_content(items, template)
-        
+
+    # Build dynamic subject from article titles
+    titles = [item.title for item in items]
+    subject = "[ssp.sh] " + ", ".join(titles)
+
     # Get list ID
     list_id = get_list_id(
         host=os.getenv("LISTMONK_HOST"),
@@ -233,15 +258,15 @@ def main(dry_run: bool):
         api_token=os.getenv("LISTMONK_API_TOKEN"),
         list_name=os.getenv("LIST_NAME")
     )
-    
-    # Schedule campaign 
+
+    # Schedule campaign
     success = schedule_campaign(
         host=os.getenv("LISTMONK_HOST"),
         api_user=os.getenv("LISTMONK_API_USER"),
         api_token=os.getenv("LISTMONK_API_TOKEN"),
         list_id=list_id,
         content=content,
-        subject=os.getenv("SUBJECT_NAME"),
+        subject=subject,
         dry_run=dry_run
     )
     
