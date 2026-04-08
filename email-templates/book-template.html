@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Engineering Design Patterns - Book Updates</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+    
+    .container {
+      max-width: 650px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    p, div, ul, li {
+      font-size: 16px;
+      margin-bottom: 1em;
+    }
+    
+    a {
+      color: #0366d6 !important; /* Different color for book updates */
+      text-decoration: none;
+    }
+    
+    a:hover {
+      text-decoration: underline;
+    }
+    
+    hr {
+      border: 0;
+      border-bottom: 1px solid #eaeaea;
+      margin: 25px 0;
+    }
+    
+    .intro {
+      color: #555;
+      margin-bottom: 25px;
+    }
+    
+    .newsletter-body {
+      margin: 25px 0;
+    }
+    
+    .newsletter-footer {
+      font-size: 14px;
+      color: #666;
+      margin-top: 25px;
+    }
+    
+    h1, h2, h3 {
+      color: #24292e;
+      margin-top: 1.5em;
+      margin-bottom: 0.5em;
+      line-height: 1.3;
+    }
+    
+    h1 { font-size: 24px; }
+    h2 { font-size: 20px; }
+    h3 { font-size: 18px; }
+    
+    img {
+      max-width: 100%;
+      height: auto;
+      margin: 15px 0;
+      -ms-interpolation-mode: bicubic;
+    }
+    
+    code {
+      background: #f6f8fa;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 85%;
+    }
+    
+    pre {
+      background: #f6f8fa;
+      padding: 16px;
+      border-radius: 6px;
+      overflow: auto;
+      font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 85%;
+      line-height: 1.45;
+    }
+    
+    blockquote {
+      border-left: 3px solid #e1e4e8;
+      color: #6a737d;
+      margin-left: 0;
+      padding-left: 1em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="intro">
+      <p>This is a book update for <a href="https://dedp.online/" target="_blank" rel="noreferrer">Data Engineering Design Patterns</a>.</p>
+    </div>
+    
+    <div class="newsletter-body">
+      {{ template "content" . }}
+    </div>
+    
+    <hr>
+    
+    <div class="newsletter-footer">
+      <p><a href="https://dedp.online/" target="_blank" rel="noreferrer">Read the book</a> | <a href="https://dedp.online/appendix/changelog.html" target="_blank" rel="noreferrer">Changelog</a> | <a href="https://www.ssp.sh/book/" target="_blank" rel="noreferrer">Book page</a></p>
+      <p>Thank you for subscribing to my <a href="https://dedp.online/" target="_blank" rel="noreferrer">Data Engineering Design Patterns</a> book updates | Have suggestions? Just reply to this email | Don't want these emails anymore? Click <a href="{{ UnsubscribeURL }}" target="_blank" rel="noreferrer">Unsubscribe</a></p>
+    </div>
+  </div>
+</body>
+</html>
