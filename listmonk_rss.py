@@ -3,11 +3,14 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import re
+
 import httpx
 import feedparser
 from jinja2 import Template
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
+from markdownify import markdownify as md
 import click
 import logging
 
@@ -19,8 +22,32 @@ load_dotenv()
 # Constants
 TEMPLATE_FILE = Path("template.md.j2")
 
+def convert_wikilinks(content: str, brain_base_url: str = "https://ssp.sh/brain/") -> str:
+    """Convert [[wikilinks]] and [[target|alias]] to markdown links."""
+    def slugify(text: str) -> str:
+        slug = text.lower()
+        slug = re.sub(r"[''']", "", slug)
+        slug = re.sub(r"[^a-z0-9\s-]", "", slug)
+        slug = re.sub(r"\s+", "-", slug)
+        slug = re.sub(r"-+", "-", slug)
+        slug = slug.strip("-")
+        return slug
+
+    def replace_wikilink(match):
+        inner = match.group(1)
+        if "|" in inner:
+            target, display = inner.split("|", 1)
+            target, display = target.strip(), display.strip()
+        else:
+            target = display = inner.strip()
+        url = f"{brain_base_url}{slugify(target)}/"
+        return f"[{display}]({url})"
+
+    return re.sub(r"\[\[([^\]]+)\]\]", replace_wikilink, content)
+
+
 def truncate_to_intro(content: str, link: str) -> str:
-    """Truncate content to everything before the first heading (h2 or ##)."""
+    """Truncate content to everything before the first heading (h2 or ##), then convert to markdown."""
     # Try HTML <h2> first (RSS feeds typically contain HTML)
     h2_pos = content.lower().find('<h2')
     if h2_pos > 0:
@@ -34,6 +61,31 @@ def truncate_to_intro(content: str, link: str) -> str:
                 break
             truncated_lines.append(line)
         content = '\n'.join(truncated_lines).rstrip()
+
+    # Convert HTML to markdown
+    content = md(content, heading_style="ATX", strip=['img']).strip()
+
+    # Remove markdown callouts (> [!note], > [!tip], etc.)
+    content = re.sub(
+        r"^> \[![\w]+\].*$(?:\n^>.*$)*",
+        "",
+        content,
+        flags=re.MULTILINE,
+    )
+
+    # Remove Hugo admonition shortcodes
+    content = re.sub(
+        r"\{\{<\s*admonition[^>]*>\}\}.*?\{\{<\s*/admonition\s*>\}\}",
+        "",
+        content,
+        flags=re.DOTALL,
+    )
+
+    # Clean up excess blank lines left behind
+    content = re.sub(r"\n{3,}", "\n\n", content).strip()
+
+    # Convert wikilinks to proper markdown links
+    content = convert_wikilinks(content)
 
     content += f'\n\n[Continue reading...]({link})'
     return content
