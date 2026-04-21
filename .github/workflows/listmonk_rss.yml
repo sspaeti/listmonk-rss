@@ -2,7 +2,7 @@ name: Listmonk RSS Campaign
 
 on:
   schedule:
-    - cron: '00 08 * * 1-5'  # Run every weekday at 08:00 UTC and then 7h delay until Listmonk sends. Meaning sending is at 12:30 UTC, which is 14:30 CEST or 5:30 SFO
+    - cron: '00 08 * * 1-5'  # Run every weekday at 08:00 UTC and then 7h delay until Listmonk sends. Meaning sending is at 12:00 UTC, which is 14:00 CEST or 5:00 SFO
   workflow_dispatch:
 
 jobs:
