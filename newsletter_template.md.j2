@@ -61,11 +61,11 @@ Hey {{ "{{ .Subscriber.Name }}" }},
 {% endfor %}
 {% endif %}
 {% if bluesky %}
-## Bluesky Highlights
+## Social Highlights
 
-Top posts since last newsletter (by engagement):
+Top posts since last newsletter from [Bluesky](https://bsky.app/profile/ssp.sh) (by engagement) - but also shared on [Twitter](https://x.com/sspaeti/), LinkedIn(https://www.linkedin.com/in/sspaeti/), [LinkedIn SSP Data](https://www.linkedin.com/company/sspaeti/), [Mastodon](https://hachyderm.io/@sspaeti), [Substack (limited)](https://substack.com/@sspaeti) and [YouTube](https://www.youtube.com/@sspaeti)::
 {% for p in bluesky %}
-- **[{{ p.text|replace('\n', ' ')|truncate(140) }}]({{ p.url }})** — 💜 {{ p.likes }} · 🔁 {{ p.reposts }} · 💬 {{ p.replies }}
+- **[{{ p.text|replace('\n', ' ')|truncate(140) }}]({{ p.url }})** — 💙 {{ p.likes }} · 🔁 {{ p.reposts }} · 💬 {{ p.replies }}
 {% endfor %}
 {% endif %}
 
