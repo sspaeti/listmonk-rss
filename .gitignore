@@ -13,3 +13,9 @@ wheels/
 .env
 last_update.json
 /.python-version
+
+# Newsletter drafts (work-in-progress)
+drafts/
+
+# Local snapshots of sensitive source folders (Second Brain books, etc.)
+.copy/

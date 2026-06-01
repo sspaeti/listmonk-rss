@@ -1,0 +1,78 @@
+# Newsletter Draft — {{ today }}
+
+<!--
+  Auto-generated. Edit freely.
+  - Write your editorial at the top (under "Editorial — your turn").
+  - Prune / reorder / regroup the brain notes — defaults split by lines-added.
+  - Each subchapter has a placeholder paragraph for you to write a framing line.
+  - Run `make newsletter-send DRAFT=drafts/newsletter-{{ today }}.md` to push to Listmonk.
+-->
+
+Hey {{ "{{ .Subscriber.Name }}" }},
+
+## Editorial — your turn
+
+<!-- Write your free-flow intro here. -->
+
+---
+{% if blog_posts %}
+## New on the blog
+{% for p in blog_posts %}
+### [{{ p.title }}]({{ p.link }})
+
+{{ p.summary|safe }}
+{% endfor %}
+{% endif %}
+{% if brain_major or brain_minor %}
+## From the Second Brain
+
+<!-- Write a short paragraph framing what's been on your mind this period. -->
+{% if brain_major %}
+### Major updates
+
+<!-- One paragraph: what theme connects these deeper updates? -->
+{% for n in brain_major %}
+- **[{{ n.title }}]({{ n.url }})** — {{ n.description }} *({{ n.added }} lines · {{ n.last_commit_date }})*
+{% endfor %}
+{% endif %}
+{% if brain_minor %}
+### Smaller additions
+
+<!-- One paragraph: a quick line of context for these. -->
+{% for n in brain_minor %}
+- **[{{ n.title }}]({{ n.url }})** — {{ n.description }} *({{ n.added }} lines · {{ n.last_commit_date }})*
+{% endfor %}
+{% endif %}
+{% endif %}
+{% if books %}
+## Books — Read / Reading
+{% for b in books %}
+### {{ b.title }}
+
+*{% for label, date in b.new_events %}{{ label }} {{ date }}{% if not loop.last %} · {% endif %}{% endfor %}{% if b.author %} · by {{ b.author }}{% endif %}{% if b.genre %} · {{ b.genre }}{% endif %}*
+{% if b.summary %}
+> {{ b.summary }}
+{% endif %}
+{% if b.notes %}
+**Notes:**
+
+{{ b.notes }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if bluesky %}
+## Bluesky Highlights
+
+Top posts since last newsletter (by engagement):
+{% for p in bluesky %}
+- **[{{ p.text|replace('\n', ' ')|truncate(140) }}]({{ p.url }})** — 💜 {{ p.likes }} · 🔁 {{ p.reposts }} · 💬 {{ p.replies }}
+{% endfor %}
+{% endif %}
+
+---
+
+## Closing — your turn
+
+<!-- Sign-off, what you're working on next, etc. -->
+
+Simon
