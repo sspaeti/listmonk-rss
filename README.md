@@ -177,7 +177,7 @@ Edit `template.md.j2` to customize your newsletter format. The template uses Jin
   - `media_content`: OpenGraph image URL
 
 
-## Free-flow Newsletter (`newsletter.py`)
+## Free-flow Newsletter (`newsletter.py`) - run local
 
 A second mode for longer, manually-edited newsletters that pull from more
 than just your blog. Where `listmonk_rss.py` auto-sends on every new post,
