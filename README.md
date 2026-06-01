@@ -15,6 +15,9 @@ providers.
 - GitHub Actions integration for automated scheduling without the need for
   running a server
 - Dry run mode to test campaign creation without scheduling or updating state
+- **Free-flow newsletter mode** (`newsletter.py`): gather Second Brain note
+  updates (via git log), recently-read books, and top Bluesky posts into an
+  editable markdown draft before sending to Listmonk
 
 ## Requirements
 
@@ -158,6 +161,10 @@ Once you have setup and tested everything locally, you can move it to GitHub:
 | PUSHOVER_API_TOKEN    | Pushover API token for notifications (optional)  | No       |
 | GH_REPOSITORY         | GitHub repository in "owner/repo" format        | Yes      |
 | GH_TOKEN              | GitHub token with repo scope for state storage  | Yes      |
+| BRAIN_CONTENT         | Path to Hugo brain content dir (submodule path if applicable) — used by `newsletter.py` | No |
+| BOOKS_DIR             | Path to your books folder (markdown notes)       | No       |
+| BSKY_HANDLE           | Your Bluesky handle (default: `ssp.sh`)         | No       |
+| BSKY_DID              | Your Bluesky DID (default: hardcoded for ssp.sh)| No       |
 
 ### Template Customization
 
@@ -168,6 +175,67 @@ Edit `template.md.j2` to customize your newsletter format. The template uses Jin
   - `link`: Article URL
   - `summary`: Article summary
   - `media_content`: OpenGraph image URL
+
+
+## Free-flow Newsletter (`newsletter.py`)
+
+A second mode for longer, manually-edited newsletters that pull from more
+than just your blog. Where `listmonk_rss.py` auto-sends on every new post,
+`newsletter.py` gathers material from your Second Brain (via `git log` on a
+Hugo content directory), a books folder, and Bluesky into a markdown draft
+that you edit before sending.
+
+Inspired by [Simon Willison's Substack
+automation](https://simonwillison.net/2025/Nov/19/how-i-automate-my-substack-newsletter/),
+but markdown-first and without a notebook or AI generation.
+
+### Workflow
+
+```bash
+make newsletter                        # gather → drafts/newsletter-<date>.md
+$EDITOR drafts/newsletter-<date>.md    # edit editorial slots
+make newsletter-send                   # push latest draft to Listmonk
+```
+
+Overrides:
+
+```bash
+make newsletter-since SINCE=2026-04-01 # custom start date
+make newsletter-dry                    # send with 10-year delay (testing)
+make newsletter-send DRAFT=path/to.md  # send a specific draft
+make bsky-engagement                   # print top Bluesky posts ad-hoc
+```
+
+### Data sources
+
+- **Brain notes** (`BRAIN_CONTENT` env): runs `git log --numstat` against a
+  Hugo content directory (works when `content/` is a submodule — point the
+  env at the inner repo). Notes with ≥`--threshold` added lines (default
+  `20`) since the last send are included. ≥`100` → "Major updates",
+  otherwise → "Smaller additions". URL is derived from the **filename
+  slug**, not the frontmatter title (Hugo convention).
+- **Books** (`BOOKS_DIR` env): scans `*.md` files for `Created`,
+  `Started reading`, or `Finished reading` dates. Pulls the `> [!summary]`
+  callout and `## Notes During Reading` section. The source folder is
+  copied to `.copy/books/` (gitignored) on every run — the script never
+  touches the live vault.
+- **Bluesky** (`BSKY_HANDLE` / `BSKY_DID` env): DuckDB query against
+  `app.bsky.feed.getAuthorFeed`, top N by engagement.
+- **Blog posts**: reuses `fetch_rss_feed()` from `listmonk_rss.py`, capped
+  at 2 by default (the RSS workflow already announces them).
+
+### State
+
+`.last_newsletter` (a single ISO timestamp at the repo root, committed)
+tracks the last successful send. `gather` only includes content newer than
+that date. The date advances **only on `send`** — re-runs of `gather` are
+idempotent, and items you didn't use stay in the next draft until actually
+sent.
+
+### Template
+
+Edit `newsletter_template.md.j2`. Variables available: `today`,
+`blog_posts`, `brain_major`, `brain_minor`, `books`, `bluesky`.
 
 
 ## Related work and Contributing
