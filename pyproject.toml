@@ -1,7 +1,7 @@
 [project]
 name = "listmonk-rss"
 version = "0.1.0"
-description = "Add your description here"
+description = "Provide an RSS integration for listmonk, a self-hosted newsletter and mailing list manager"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
