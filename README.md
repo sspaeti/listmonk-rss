@@ -255,4 +255,4 @@ would be to fork it and adjust it to your needs.
 
 ## Contact
 
-You may want to subscribe to [my blog](https://blog.heuel.org) 😃.
+You may want to subscribe to [my blog](https://subscribe.ssp.sh/) 😃.
