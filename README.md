@@ -1,5 +1,9 @@
 # Listmonk RSS Newsletter Automation
 
+> [!INFO]
+> This originally a fork of [listmonk-rss](https://github.com/ping13/listmonk-rss) by [Stephan Heuel](https://github.com/ping13). I have changed some small things to my liking, and added a new script for automating and templating my newsletter with `newsletter.py` similar to what [Simon Willison’s Substack automation](https://simonwillison.net/2025/Nov/19/how-i-automate-my-substack-newsletter/?ref=ssp.sh) does, but with [Listmonk](https://www.ssp.sh/brain/listmonk) and all local with Markdown. Find more details at [How to automate Newsletter based on SecondBrain and Bluesky changes](https://www.ssp.sh/brain/how-to-automate-newsletter-based-on-secondbrain-and-bluesky-changes/).
+
+
 Automatically send newsletters from RSS feeds using [Listmonk (open
 source)](https://listmonk.app) and GitHub Actions, saving money compared to
 [Mailchimp](https://mailchimp.com/features/rss-to-email/) and other newsletter
