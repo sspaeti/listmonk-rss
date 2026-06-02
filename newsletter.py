@@ -16,6 +16,7 @@ import os
 import re
 import shutil
 import subprocess
+import tomllib
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -38,7 +39,22 @@ LAST_NEWSLETTER_FILE = ROOT / ".last_newsletter"
 DRAFTS_DIR = ROOT / "drafts"
 COPY_DIR = ROOT / ".copy"  # snapshots of sensitive source dirs (gitignored)
 TEMPLATE_FILE = ROOT / "newsletter_template.md.j2"
-BSKY_FETCH_AMOUNT = 15
+CONFIG_FILE = ROOT / "newsletter.toml"
+
+
+def _load_config() -> dict:
+    if CONFIG_FILE.exists():
+        with open(CONFIG_FILE, "rb") as f:
+            return tomllib.load(f)
+    return {}
+
+
+CONFIG = _load_config()
+_BRAIN_CFG = CONFIG.get("brain", {})
+_BLOG_CFG = CONFIG.get("blog", {})
+_BOOKS_CFG = CONFIG.get("books", {})
+_BSKY_CFG = CONFIG.get("bluesky", {})
+_GATHER_CFG = CONFIG.get("gather", {})
 
 # Brain content lives in a git submodule under second-brain-public/content,
 # which has its own .git — git log must run inside that submodule path.
@@ -52,9 +68,14 @@ BRAIN_BASE_URL = "https://www.ssp.sh/brain/"
 BSKY_HANDLE = os.getenv("BSKY_HANDLE", "ssp.sh")
 BSKY_DID = os.getenv("BSKY_DID", "did:plc:edglm4muiyzty2snc55ysuqx")
 
-DEFAULT_THRESHOLD = 20  # min added lines to count a brain note as a meaningful update
-DEFAULT_LOOKBACK_DAYS = 60  # used when .last_newsletter doesn't exist yet
-MAJOR_BUCKET_LINES = 100  # brain notes with >= this many lines added go in "Major" bucket
+DEFAULT_THRESHOLD_WORDS = _BRAIN_CFG.get("threshold_words", 100)
+DEFAULT_MAJOR_BUCKET_WORDS = _BRAIN_CFG.get("major_bucket_words", 500)
+DEFAULT_BRAIN_LIMIT = _BRAIN_CFG.get("limit", 40)
+DEFAULT_BLOG_LIMIT = _BLOG_CFG.get("limit", 2)
+DEFAULT_BOOKS_LIMIT = _BOOKS_CFG.get("limit", 5)
+DEFAULT_BSKY_TOP = _BSKY_CFG.get("top", 15)
+DEFAULT_BSKY_RECENT = _BSKY_CFG.get("recent", 10)
+DEFAULT_LOOKBACK_DAYS = _GATHER_CFG.get("default_lookback_days", 60)
 
 
 # ----- State -----
@@ -80,43 +101,100 @@ def slugify(text: str) -> str:
 
 # ----- Second Brain (git-based change detection) -----
 
-def gather_brain_updates(since: datetime, threshold: int) -> list[dict]:
-    """Notes in BRAIN_CONTENT with at least `threshold` added lines since `since`."""
-    if not BRAIN_CONTENT.exists():
-        click.echo(f"BRAIN_CONTENT {BRAIN_CONTENT} not found, skipping brain updates", err=True)
-        return []
+def _git_word_stats(since: datetime) -> dict[str, dict]:
+    """Parse `git log -p` to count added/deleted *words* per .md file since `since`.
 
+    Returns `{path: {"added_words", "deleted_words", "last_commit_date"}}`.
+    Words are whitespace-split tokens from `+`/`-` diff lines (markdown syntax
+    counts too, but it's a relative measure, so that's fine for ranking)."""
     result = subprocess.run(
         [
-            "git", "-C", str(BRAIN_CONTENT), "log",
+            "git", "-c", "core.quotePath=false",
+            "-C", str(BRAIN_CONTENT), "log",
             f"--since={since.strftime('%Y-%m-%d %H:%M:%S')}",
-            "--numstat", "--format=__COMMIT__%H|%ai",
+            "-p", "--format=__COMMIT__%H|%ai",
+            "--", "*.md",
         ],
         capture_output=True, text=True, check=True,
     )
 
-    stats = defaultdict(lambda: {"added": 0, "deleted": 0, "last_commit_date": ""})
+    stats: dict[str, dict] = defaultdict(
+        lambda: {"added_words": 0, "deleted_words": 0, "last_commit_date": ""}
+    )
     current_date = ""
+    current_path: str | None = None
+    is_binary = False
+
     for line in result.stdout.splitlines():
         if line.startswith("__COMMIT__"):
             _, _, rest = line.partition("__COMMIT__")
             _, _, current_date = rest.partition("|")
             continue
-        parts = line.split("\t")
-        if len(parts) != 3 or not parts[0].isdigit():
+        if line.startswith("diff --git "):
+            # `diff --git a/PATH b/PATH` — take everything after the last " b/".
+            _, _, b_path = line.partition(" b/")
+            current_path = b_path if b_path.endswith(".md") else None
+            is_binary = False
+            if current_path and not stats[current_path]["last_commit_date"]:
+                stats[current_path]["last_commit_date"] = current_date
             continue
-        added, deleted, path = int(parts[0]), int(parts[1]), parts[2]
-        if not path.endswith(".md"):
+        if current_path is None:
             continue
-        s = stats[path]
-        s["added"] += added
-        s["deleted"] += deleted
-        if not s["last_commit_date"]:  # git log is reverse-chrono, first seen = most recent
-            s["last_commit_date"] = current_date
+        if line.startswith("Binary files"):
+            is_binary = True
+            continue
+        if is_binary or line.startswith(("+++", "---", "@@")):
+            continue
+        if line.startswith("+"):
+            stats[current_path]["added_words"] += len(line[1:].split())
+        elif line.startswith("-"):
+            stats[current_path]["deleted_words"] += len(line[1:].split())
+
+    return stats
+
+
+def _first_commit_dates() -> dict[str, str]:
+    """Map every .md file in BRAIN_CONTENT to the date of its first-ever commit.
+    Used to flag notes that look like a "big edit" but are actually brand-new
+    files (typical when content is exported from a private vault — git sees the
+    whole file as one large addition)."""
+    result = subprocess.run(
+        [
+            "git", "-c", "core.quotePath=false", "-C", str(BRAIN_CONTENT),
+            "log", "--reverse", "--diff-filter=A",
+            "--name-only", "--format=__COMMIT__%ai",
+            "--", "*.md",
+        ],
+        capture_output=True, text=True, check=True,
+    )
+    first: dict[str, str] = {}
+    current_date = ""
+    for line in result.stdout.splitlines():
+        if line.startswith("__COMMIT__"):
+            current_date = line[len("__COMMIT__"):]
+        elif line.endswith(".md") and line not in first:
+            first[line] = current_date
+    return first
+
+
+def gather_brain_updates(since: datetime, threshold_words: int) -> list[dict]:
+    """Notes in BRAIN_CONTENT with at least `threshold_words` added words since `since`.
+
+    Each entry includes `is_new` — True when the file's first-ever commit falls
+    within the window (so the word count reflects a fresh add, not a small edit
+    on an old note)."""
+    if not BRAIN_CONTENT.exists():
+        click.echo(f"BRAIN_CONTENT {BRAIN_CONTENT} not found, skipping brain updates", err=True)
+        return []
+
+    stats = _git_word_stats(since)
+    first_dates = _first_commit_dates()
+    since_iso = since.strftime("%Y-%m-%d")
 
     updates = []
     for path, s in stats.items():
-        if s["added"] < threshold:
+        net = s["added_words"] - s["deleted_words"]
+        if net < threshold_words:
             continue
         full = BRAIN_CONTENT / path
         if not full.exists():
@@ -128,17 +206,22 @@ def gather_brain_updates(since: datetime, threshold: int) -> list[dict]:
         slug = slugify(Path(path).stem)
         title = meta.get("title") or Path(path).stem.title()
         description = meta.get("description") or _first_sentence(full)
+        first = first_dates.get(path, "")
+        is_new = bool(first) and first[:10] >= since_iso
         updates.append({
             "title": title,
             "description": description,
             "url": f"{BRAIN_BASE_URL}{slug}/",
-            "added": s["added"],
-            "deleted": s["deleted"],
+            "added_words": s["added_words"],
+            "deleted_words": s["deleted_words"],
+            "net_words": net,
+            "is_new": is_new,
             "last_commit_date": s["last_commit_date"][:10],
+            "first_commit_date": first[:10],
             "path": path,
         })
 
-    updates.sort(key=lambda u: u["added"], reverse=True)
+    updates.sort(key=lambda u: u["net_words"], reverse=True)
     return updates
 
 
@@ -318,7 +401,13 @@ def _extract_book_notes(path: Path, max_chars: int = 800) -> str:
 
 # ----- Bluesky -----
 
-def gather_bluesky(since: datetime, top_n: int = BSKY_FETCH_AMOUNT) -> list[dict]:
+def gather_bluesky(
+    since: datetime,
+    top_n: int = DEFAULT_BSKY_TOP,
+    recent_n: int = DEFAULT_BSKY_RECENT,
+) -> dict[str, list[dict]]:
+    """Fetch the author feed once, return both top-by-engagement and most-recent
+    posts. `recent` is deduped against `top` so the same post never appears twice."""
     url = (
         f"https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed"
         f"?actor={BSKY_DID}&limit=100"
@@ -342,29 +431,45 @@ def gather_bluesky(since: datetime, top_n: int = BSKY_FETCH_AMOUNT) -> list[dict
                      p.post.likeCount  + p.post.quoteCount) AS engagement
                 FROM unnested
                 WHERE p.post.author.handle = '{BSKY_HANDLE}'
+                  AND p.post.record.createdAt >= '{since_str}'
+            ),
+            ranked AS (
+                SELECT *,
+                    ROW_NUMBER() OVER (ORDER BY engagement DESC, created_at DESC) AS rn_eng,
+                    ROW_NUMBER() OVER (ORDER BY created_at DESC) AS rn_recent
+                FROM data
             )
-            SELECT uri, text, created_at, engagement, replies, reposts, likes, quotes
-            FROM data
-            WHERE created_at >= '{since_str}'
-            ORDER BY engagement DESC
-            LIMIT {top_n}
+            SELECT uri, text, created_at, engagement, replies, reposts, likes, quotes,
+                   rn_eng, rn_recent
+            FROM ranked
+            WHERE rn_eng <= {top_n} OR rn_recent <= {recent_n}
         """).fetchall()
     except Exception as e:
         click.echo(f"Bluesky fetch failed: {e}", err=True)
-        return []
+        return {"top": [], "recent": []}
 
-    posts = []
-    for uri, text, _created, eng, replies, reposts, likes, _quotes in rows:
+    top, recent = [], []
+    for uri, text, _created, eng, replies, reposts, likes, _quotes, rn_eng, rn_recent in rows:
         rkey = uri.rsplit("/", 1)[-1]
-        posts.append({
+        post = {
             "url": f"https://bsky.app/profile/{BSKY_HANDLE}/post/{rkey}",
             "text": (text or "").strip(),
             "engagement": eng,
             "likes": likes,
             "reposts": reposts,
             "replies": replies,
-        })
-    return posts
+        }
+        if rn_eng <= top_n:
+            top.append((rn_eng, post))
+        if rn_recent <= recent_n:
+            recent.append((rn_recent, post))
+
+    top.sort(key=lambda x: x[0])
+    recent.sort(key=lambda x: x[0])
+    top_posts = [p for _, p in top]
+    top_urls = {p["url"] for p in top_posts}
+    recent_posts = [p for _, p in recent if p["url"] not in top_urls]
+    return {"top": top_posts, "recent": recent_posts}
 
 
 # ----- Blog posts (reuse RSS logic) -----
@@ -390,33 +495,40 @@ def cli():
 @cli.command()
 @click.option("--since", default=None,
               help="Override start date (YYYY-MM-DD). Default: read from .last_newsletter")
-@click.option("--threshold", default=DEFAULT_THRESHOLD, show_default=True,
-              help="Min added lines for a brain note to count as a meaningful update")
-@click.option("--brain-limit", default=20, show_default=True,
-              help="Max brain notes to include (top N by lines added)")
-@click.option("--blog-limit", default=2, show_default=True,
+@click.option("--threshold-words", default=DEFAULT_THRESHOLD_WORDS, show_default=True,
+              help="Min net words changed (added - deleted) for a brain note to count")
+@click.option("--major-bucket-words", default=DEFAULT_MAJOR_BUCKET_WORDS, show_default=True,
+              help="Brain notes with at least this many net words go in the 'Major' bucket")
+@click.option("--brain-limit", default=DEFAULT_BRAIN_LIMIT, show_default=True,
+              help="Max brain notes to include (top N by net words changed)")
+@click.option("--blog-limit", default=DEFAULT_BLOG_LIMIT, show_default=True,
               help="Max blog posts (kept low since listmonk_rss.py already announces these)")
-@click.option("--books-limit", default=5, show_default=True)
-@click.option("--bluesky-top", default=15, show_default=True)
-def gather(since, threshold, brain_limit, blog_limit, books_limit, bluesky_top):
+@click.option("--books-limit", default=DEFAULT_BOOKS_LIMIT, show_default=True)
+@click.option("--bluesky-top", default=DEFAULT_BSKY_TOP, show_default=True,
+              help="Top N Bluesky posts by engagement")
+@click.option("--bluesky-recent", default=DEFAULT_BSKY_RECENT, show_default=True,
+              help="Most recent N Bluesky posts (deduped against --bluesky-top)")
+def gather(since, threshold_words, major_bucket_words, brain_limit, blog_limit,
+           books_limit, bluesky_top, bluesky_recent):
     """Build a draft markdown file from recent content."""
     since_dt = datetime.fromisoformat(since) if since else get_last_newsletter_date()
     click.echo(f"Gathering content since {since_dt.isoformat()}")
 
     blog_posts = gather_blog_posts(since_dt)[:blog_limit]
-    brain_updates = gather_brain_updates(since_dt, threshold=threshold)[:brain_limit]
-    brain_major = [n for n in brain_updates if n["added"] >= MAJOR_BUCKET_LINES]
-    brain_minor = [n for n in brain_updates if n["added"] < MAJOR_BUCKET_LINES]
+    brain_updates = gather_brain_updates(since_dt, threshold_words=threshold_words)[:brain_limit]
+    brain_major = [n for n in brain_updates if n["net_words"] >= major_bucket_words]
+    brain_minor = [n for n in brain_updates if n["net_words"] < major_bucket_words]
     books = gather_books(since_dt, limit=books_limit)
-    bluesky = gather_bluesky(since_dt, top_n=bluesky_top)
+    bluesky = gather_bluesky(since_dt, top_n=bluesky_top, recent_n=bluesky_recent)
 
     click.echo(
         f"  blog: {len(blog_posts)}  brain: {len(brain_updates)} "
         f"(major: {len(brain_major)}, minor: {len(brain_minor)})  "
-        f"books: {len(books)}  bluesky: {len(bluesky)}"
+        f"books: {len(books)}  "
+        f"bluesky: top {len(bluesky['top'])} / recent {len(bluesky['recent'])}"
     )
 
-    if not any([blog_posts, brain_updates, books, bluesky]):
+    if not any([blog_posts, brain_updates, books, bluesky["top"], bluesky["recent"]]):
         click.echo("Nothing to include. Skipping draft creation.")
         return
 
@@ -434,7 +546,7 @@ def gather(since, threshold, brain_limit, blog_limit, books_limit, bluesky_top):
     out_path = DRAFTS_DIR / f"newsletter-{today}.md"
     out_path.write_text(out)
     click.echo(f"\nDraft written: {out_path}")
-    click.echo(f"Edit it, then run:  uv run python newsletter.py send {out_path}")
+    click.echo(f"Edit it, then run: `make newsletter-send` to schedule on Listmonk {out_path}")
 
 
 @cli.command()

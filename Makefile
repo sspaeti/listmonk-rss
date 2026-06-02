@@ -57,7 +57,7 @@ bsky-engagement:   ## ad-hoc: print your top Bluesky posts via DuckDB (since=YYY
 	echo "Top Bluesky posts since $$SINCE:"; \
 	uv run python -c "from newsletter import gather_bluesky; from datetime import datetime; \
 	[print(f\"{p['engagement']:>4}  💜{p['likes']:>3} 🔁{p['reposts']:>2} 💬{p['replies']:>2}  {p['text'][:90]}  {p['url']}\") \
-	 for p in gather_bluesky(datetime.fromisoformat('$$SINCE'), top_n=20)]"
+	 for p in gather_bluesky(datetime.fromisoformat('$$SINCE'), top_n=20)['top']]"
 
 
 diagrams: $(PLANTUML_DIAGRAMS_PNG) ## Generate architecture diagrams

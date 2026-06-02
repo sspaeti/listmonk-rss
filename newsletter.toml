@@ -1,0 +1,23 @@
+# Defaults for `newsletter.py gather`. CLI flags override these.
+
+[brain]
+# Min net words changed (added - deleted) for a brain note to count.
+threshold_words = 50
+# Notes with at least this many net words changed go in the "Major" bucket.
+major_bucket_words = 500
+# Max brain notes to include (top N by net words changed).
+limit = 40
+
+[blog]
+limit = 2
+
+[books]
+limit = 5
+
+[bluesky]
+top = 15
+recent = 8
+
+[gather]
+# Lookback window when .last_newsletter doesn't exist (days).
+default_lookback_days = 30
