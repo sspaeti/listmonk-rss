@@ -32,7 +32,7 @@ Hey {{ "{{ .Subscriber.Name }}" }},
 
 <!-- One paragraph: what theme connects these deeper updates? -->
 {% for n in brain_major %}
-- **[{{ n.title }}]({{ n.url }})** — {{ n.description }} *({% if n.is_new %}new · {{ n.added_words }} words{% else %}{{ n.net_words }} words changed{% endif %} · {{ n.last_commit_date }})*
+- **[{{ n.title }}]({{ n.url }})** — {{ n.description }} *({% if n.is_new %}new · {{ n.added_words }} words{% else %}{{ n.changed_words }} words changed{% endif %} · {{ n.last_commit_date }})*
 {% endfor %}
 {% endif %}
 {% if brain_minor %}
@@ -40,7 +40,7 @@ Hey {{ "{{ .Subscriber.Name }}" }},
 
 <!-- One paragraph: a quick line of context for these. -->
 {% for n in brain_minor %}
-- **[{{ n.title }}]({{ n.url }})** — {{ n.description }} *({% if n.is_new %}new · {{ n.added_words }} words{% else %}{{ n.net_words }} words changed{% endif %} · {{ n.last_commit_date }})*
+- **[{{ n.title }}]({{ n.url }})** — {{ n.description }} *({% if n.is_new %}new · {{ n.added_words }} words{% else %}{{ n.changed_words }} words changed{% endif %} · {{ n.last_commit_date }})*
 {% endfor %}
 {% endif %}
 {% endif %}

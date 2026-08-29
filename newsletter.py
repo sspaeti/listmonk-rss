@@ -17,7 +17,7 @@ import re
 import shutil
 import subprocess
 import tomllib
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -101,19 +101,55 @@ def slugify(text: str) -> str:
 
 
 # ----- Second Brain (git-based change detection) -----
+# Diff parsing is kept in sync with second-brain-public/utils/recent_updates.py
+# (ported, not imported, so each repo stays self-contained).
 
-def _git_word_stats(since: datetime) -> dict[str, dict]:
-    """Parse `git log -p` to count added/deleted *words* per .md file since `since`.
+_HUNK_RE = re.compile(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@")
 
-    Returns `{path: {"added_words", "deleted_words", "last_commit_date"}}`.
-    Words are whitespace-split tokens from `+`/`-` diff lines (markdown syntax
-    counts too, but it's a relative measure, so that's fine for ranking)."""
+
+def _frontmatter_end_line(path: Path) -> int:
+    """1-based line number of a note's closing `---` frontmatter delimiter, so
+    lines 1..N are frontmatter. 0 if no frontmatter. Approximated from the
+    current version and reused for all commits — enough to keep metadata edits
+    (description, lastmod, OG lines) out of the word counts."""
+    try:
+        lines = path.read_text(encoding="utf-8", errors="ignore").split("\n")
+    except OSError:
+        return 0
+    if not lines or lines[0].strip() != "---":
+        return 0
+    for i in range(1, len(lines)):
+        if lines[i].strip() == "---":
+            return i + 1
+    return 0
+
+
+def _resolve_rename(path: str, renames: dict[str, str]) -> str:
+    """Follow a rename chain (old -> ... -> current on-disk path)."""
+    seen = set()
+    while path in renames and path not in seen:
+        seen.add(path)
+        path = renames[path]
+    return path
+
+
+def _git_word_stats(since: datetime) -> tuple[dict[str, dict], dict[str, str]]:
+    """Parse `git log -p` to count changed *words* per .md file since `since`.
+
+    Returns `({path: {"added_words", "deleted_words", "last_commit_date"}},
+    {old_path: new_path} renames)`. Counts are word-level churn per commit
+    (multiset difference of removed vs added words), so a one-word grammar fix
+    inside a one-line 100-word paragraph counts ~1, not 200, and a paragraph
+    moved verbatim counts 0. Frontmatter lines are excluded via file line
+    numbers. `git log` is newest-first, so a rename is parsed before the older
+    commits still using the old path."""
     result = subprocess.run(
         [
             "git", "-c", "core.quotePath=false",
             "-C", str(BRAIN_CONTENT), "log",
             f"--since={since.strftime('%Y-%m-%d %H:%M:%S')}",
-            "-p", "--format=__COMMIT__%H|%ai",
+            "-p", "-M", "--src-prefix=a/", "--dst-prefix=b/",
+            "--format=__COMMIT__%H|%ai",
             "--", "*.md",
         ],
         capture_output=True, text=True, check=True,
@@ -122,20 +158,42 @@ def _git_word_stats(since: datetime) -> dict[str, dict]:
     stats: dict[str, dict] = defaultdict(
         lambda: {"added_words": 0, "deleted_words": 0, "last_commit_date": ""}
     )
+    renames: dict[str, str] = {}
     current_date = ""
     current_path: str | None = None
+    rename_from: str | None = None
+    add_words: Counter = Counter()
+    rem_words: Counter = Counter()
     is_binary = False
+    seen_hunk = False          # True once past the per-file diff header preamble
+    fm_end = 0                 # last frontmatter line for the current file
+    old_ln = new_ln = 0        # running line numbers within the current hunk
+
+    def flush() -> None:
+        nonlocal current_path, add_words, rem_words
+        if current_path is not None:
+            # Word-level churn: words that survive a line rewrite cancel out.
+            stats[current_path]["added_words"] += sum((add_words - rem_words).values())
+            stats[current_path]["deleted_words"] += sum((rem_words - add_words).values())
+        current_path = None
+        add_words, rem_words = Counter(), Counter()
 
     for line in result.stdout.splitlines():
         if line.startswith("__COMMIT__"):
+            flush()
             _, _, rest = line.partition("__COMMIT__")
             _, _, current_date = rest.partition("|")
             continue
         if line.startswith("diff --git "):
-            # `diff --git a/PATH b/PATH` — take everything after the last " b/".
+            flush()
+            # `diff --git a/PATH b/PATH` — take everything after the first " b/".
             _, _, b_path = line.partition(" b/")
             current_path = b_path if b_path.endswith(".md") else None
+            rename_from = None
             is_binary = False
+            seen_hunk = False
+            fm_end = 0
+            old_ln = new_ln = 0
             if current_path and not stats[current_path]["last_commit_date"]:
                 stats[current_path]["last_commit_date"] = current_date
             continue
@@ -144,14 +202,42 @@ def _git_word_stats(since: datetime) -> dict[str, dict]:
         if line.startswith("Binary files"):
             is_binary = True
             continue
-        if is_binary or line.startswith(("+++", "---", "@@")):
+        if is_binary:
+            continue
+        if not seen_hunk and line.startswith("rename from "):
+            rename_from = line[len("rename from "):]
+            continue
+        if not seen_hunk and line.startswith("rename to ") and rename_from:
+            renames[rename_from] = line[len("rename to "):]
+            rename_from = None
+            continue
+        m = _HUNK_RE.match(line)
+        if m:
+            old_ln, new_ln = int(m.group(1)), int(m.group(2))
+            if not seen_hunk:
+                # Deferred past the rename lines so an old-path commit can find
+                # the note under its current on-disk name.
+                fm_end = _frontmatter_end_line(
+                    BRAIN_CONTENT / _resolve_rename(current_path, renames)
+                )
+            seen_hunk = True
+            continue
+        if not seen_hunk:      # still in the diff preamble (index / ---/+++ headers)
             continue
         if line.startswith("+"):
-            stats[current_path]["added_words"] += len(line[1:].split())
+            if new_ln > fm_end:            # body only
+                add_words.update(line[1:].split())
+            new_ln += 1
         elif line.startswith("-"):
-            stats[current_path]["deleted_words"] += len(line[1:].split())
+            if old_ln > fm_end:            # body only
+                rem_words.update(line[1:].split())
+            old_ln += 1
+        else:                              # context line: advances both sides
+            old_ln += 1
+            new_ln += 1
+    flush()
 
-    return stats
+    return stats, renames
 
 
 def _first_commit_dates() -> dict[str, str]:
@@ -179,7 +265,9 @@ def _first_commit_dates() -> dict[str, str]:
 
 
 def gather_brain_updates(since: datetime, threshold_words: int) -> list[dict]:
-    """Notes in BRAIN_CONTENT with at least `threshold_words` added words since `since`.
+    """Notes in BRAIN_CONTENT with at least `threshold_words` changed words
+    (word-level added + deleted) since `since` — churn, not growth, so a heavy
+    same-length rewrite still qualifies.
 
     Each entry includes `is_new` — True when the file's first-ever commit falls
     within the window (so the word count reflects a fresh add, not a small edit
@@ -188,14 +276,36 @@ def gather_brain_updates(since: datetime, threshold_words: int) -> list[dict]:
         click.echo(f"BRAIN_CONTENT {BRAIN_CONTENT} not found, skipping brain updates", err=True)
         return []
 
-    stats = _git_word_stats(since)
+    stats, renames = _git_word_stats(since)
     first_dates = _first_commit_dates()
     since_iso = since.strftime("%Y-%m-%d")
 
+    # Stitch a renamed note's history back together under its current path,
+    # so a rename doesn't read as "old note vanished + huge brand-new note".
+    for old in list(stats):
+        new = _resolve_rename(old, renames)
+        if new != old:
+            s_old = stats.pop(old)
+            s_new = stats[new]
+            s_new["added_words"] += s_old["added_words"]
+            s_new["deleted_words"] += s_old["deleted_words"]
+            s_new["last_commit_date"] = max(
+                s_new["last_commit_date"], s_old["last_commit_date"]
+            )
+    for old in list(first_dates):
+        new = _resolve_rename(old, renames)
+        if new != old:
+            first_dates[new] = (
+                min(first_dates[old], first_dates[new])
+                if new in first_dates else first_dates[old]
+            )
+            del first_dates[old]
+
     updates = []
     for path, s in stats.items():
+        changed = s["added_words"] + s["deleted_words"]
         net = s["added_words"] - s["deleted_words"]
-        if net < threshold_words:
+        if changed < threshold_words:
             continue
         full = BRAIN_CONTENT / path
         if not full.exists():
@@ -216,13 +326,14 @@ def gather_brain_updates(since: datetime, threshold_words: int) -> list[dict]:
             "added_words": s["added_words"],
             "deleted_words": s["deleted_words"],
             "net_words": net,
+            "changed_words": changed,
             "is_new": is_new,
             "last_commit_date": s["last_commit_date"][:10],
             "first_commit_date": first[:10],
             "path": path,
         })
 
-    updates.sort(key=lambda u: u["net_words"], reverse=True)
+    updates.sort(key=lambda u: u["changed_words"], reverse=True)
     return updates
 
 
@@ -497,11 +608,11 @@ def cli():
 @click.option("--since", default=None,
               help="Override start date (YYYY-MM-DD). Default: read from .last_newsletter")
 @click.option("--threshold-words", default=DEFAULT_THRESHOLD_WORDS, show_default=True,
-              help="Min net words changed (added - deleted) for a brain note to count")
+              help="Min changed words (word-level added + deleted) for a brain note to count")
 @click.option("--major-bucket-words", default=DEFAULT_MAJOR_BUCKET_WORDS, show_default=True,
-              help="Brain notes with at least this many net words go in the 'Major' bucket")
+              help="Brain notes with at least this many changed words go in the 'Major' bucket")
 @click.option("--brain-limit", default=DEFAULT_BRAIN_LIMIT, show_default=True,
-              help="Max brain notes to include (top N by net words changed)")
+              help="Max brain notes to include (top N by changed words)")
 @click.option("--blog-limit", default=DEFAULT_BLOG_LIMIT, show_default=True,
               help="Max blog posts (kept low since listmonk_rss.py already announces these)")
 @click.option("--books-limit", default=DEFAULT_BOOKS_LIMIT, show_default=True)
@@ -517,8 +628,8 @@ def gather(since, threshold_words, major_bucket_words, brain_limit, blog_limit,
 
     blog_posts = gather_blog_posts(since_dt)[:blog_limit]
     brain_updates = gather_brain_updates(since_dt, threshold_words=threshold_words)[:brain_limit]
-    brain_major = [n for n in brain_updates if n["net_words"] >= major_bucket_words]
-    brain_minor = [n for n in brain_updates if n["net_words"] < major_bucket_words]
+    brain_major = [n for n in brain_updates if n["changed_words"] >= major_bucket_words]
+    brain_minor = [n for n in brain_updates if n["changed_words"] < major_bucket_words]
     books = gather_books(since_dt, limit=books_limit)
     bluesky = gather_bluesky(since_dt, top_n=bluesky_top, recent_n=bluesky_recent)
 
