@@ -27,6 +27,7 @@ from dotenv import load_dotenv
 from jinja2 import Template
 
 from listmonk_rss import (
+    convert_wikilinks,
     fetch_rss_feed,
     get_list_id,
     schedule_campaign,
@@ -555,7 +556,7 @@ def gather(since, threshold_words, major_bucket_words, brain_limit, blog_limit,
 @click.option("--dry-run", is_flag=True, help="Push to Listmonk with a 10-year delay (for testing)")
 def send(draft, subject, dry_run):
     """Push an edited draft to Listmonk as a scheduled campaign."""
-    content = draft.read_text()
+    content = convert_wikilinks(draft.read_text(), brain_base_url=BRAIN_BASE_URL)
     if subject is None:
         subject = f"[ssp.sh] Newsletter — {datetime.now().strftime('%B %Y')}"
 
