@@ -1,18 +1,10 @@
 # Newsletter Draft — {{ today }}
 
-<!--
-  Auto-generated. Edit freely.
-  - Write your editorial at the top (under "Editorial — your turn").
-  - Prune / reorder / regroup the brain notes — defaults split by lines-added.
-  - Each subchapter has a placeholder paragraph for you to write a framing line.
-  - Run `make newsletter-send DRAFT=drafts/newsletter-{{ today }}.md` to push to Listmonk.
--->
-
 Hey {{ "{{ .Subscriber.Name }}" }},
 
-## Editorial — your turn
-
 <!-- Write your free-flow intro here. -->
+
+# Digest of recent Blogs, Notes, and Books 
 
 ---
 {% if blog_posts %}
@@ -26,11 +18,9 @@ Hey {{ "{{ .Subscriber.Name }}" }},
 {% if brain_major or brain_minor %}
 ## From the Second Brain
 
-<!-- Write a short paragraph framing what's been on your mind this period. -->
 {% if brain_major %}
 ### Major updates
 
-<!-- One paragraph: what theme connects these deeper updates? -->
 {% for n in brain_major %}
 - **[{{ n.title }}]({{ n.url }})** — {{ n.description }} *({% if n.is_new %}new · {{ n.added_words }} words{% else %}{{ n.changed_words }} words changed{% endif %} · {{ n.last_commit_date }})*
 {% endfor %}
@@ -38,7 +28,6 @@ Hey {{ "{{ .Subscriber.Name }}" }},
 {% if brain_minor %}
 ### Smaller additions
 
-<!-- One paragraph: a quick line of context for these. -->
 {% for n in brain_minor %}
 - **[{{ n.title }}]({{ n.url }})** — {{ n.description }} *({% if n.is_new %}new · {{ n.added_words }} words{% else %}{{ n.changed_words }} words changed{% endif %} · {{ n.last_commit_date }})*
 {% endfor %}
@@ -63,7 +52,7 @@ Hey {{ "{{ .Subscriber.Name }}" }},
 {% if bluesky.top or bluesky.recent %}
 ## Social Highlights
 
-Posts since last newsletter from [Bluesky](https://bsky.app/profile/ssp.sh) - but also shared on [Twitter](https://x.com/sspaeti/), LinkedIn(https://www.linkedin.com/in/sspaeti/), [LinkedIn SSP Data](https://www.linkedin.com/company/sspaeti/), [Mastodon](https://hachyderm.io/@sspaeti), [Substack (limited)](https://substack.com/@sspaeti) and [YouTube](https://www.youtube.com/@sspaeti):
+Posts since last newsletter from [Bluesky](https://bsky.app/profile/ssp.sh) - but also shared on [Twitter](https://x.com/sspaeti/), [LinkedIn(https://www.linkedin.com/in/sspaeti/), [LinkedIn SSP Data](https://www.linkedin.com/company/sspaeti/), [Mastodon](https://hachyderm.io/@sspaeti), [Substack (limited)](https://substack.com/@sspaeti) and [YouTube](https://www.youtube.com/@sspaeti):
 {% if bluesky.top %}
 ### Top by engagement
 {% for p in bluesky.top %}
@@ -77,11 +66,3 @@ Posts since last newsletter from [Bluesky](https://bsky.app/profile/ssp.sh) - bu
 {% endfor %}
 {% endif %}
 {% endif %}
-
----
-
-## Closing — your turn
-
-<!-- Sign-off, what you're working on next, etc. -->
-
-Simon

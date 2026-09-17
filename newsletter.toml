@@ -9,7 +9,7 @@ major_bucket_words = 500
 limit = 40
 
 [blog]
-limit = 2
+limit = 5
 
 [books]
 limit = 5
