@@ -2,29 +2,29 @@ Hey {{ "{{ .Subscriber.Name }}" }},
 
 <!-- Write your free-flow intro here. -->
 
-# Digest of recent Blogs, Notes, and Books 
+## Digest of recent Blogs, Notes, and Books 
 
 ---
 {% if blog_posts %}
-## New on the blog
+### New on the blog
 {% for p in blog_posts %}
-### [{{ p.title }}]({{ p.link }})
+#### [{{ p.title }}]({{ p.link }})
 
 {{ p.summary|safe }}
 {% endfor %}
 {% endif %}
 {% if brain_major or brain_minor %}
-## From the Second Brain
+### From the Second Brain
 
 {% if brain_major %}
-### Major updates
+#### Major updates
 
 {% for n in brain_major %}
 - **[{{ n.title }}]({{ n.url }})** — {{ n.description }} *({% if n.is_new %}new · {{ n.added_words }} words{% else %}{{ n.changed_words }} words changed{% endif %} · {{ n.last_commit_date }})*
 {% endfor %}
 {% endif %}
 {% if brain_minor %}
-### Smaller additions
+#J### Smaller additions
 
 {% for n in brain_minor %}
 - **[{{ n.title }}]({{ n.url }})** — {{ n.description }} *({% if n.is_new %}new · {{ n.added_words }} words{% else %}{{ n.changed_words }} words changed{% endif %} · {{ n.last_commit_date }})*
@@ -32,9 +32,9 @@ Hey {{ "{{ .Subscriber.Name }}" }},
 {% endif %}
 {% endif %}
 {% if books %}
-## Books — Read / Reading
+### Books — Read / Reading
 {% for b in books %}
-### {{ b.title }}
+#### {{ b.title }}
 
 *{% for label, date in b.new_events %}{{ label }} {{ date }}{% if not loop.last %} · {% endif %}{% endfor %}{% if b.author %} · by {{ b.author }}{% endif %}{% if b.genre %} · {{ b.genre }}{% endif %}*
 {% if b.summary %}
@@ -48,17 +48,17 @@ Hey {{ "{{ .Subscriber.Name }}" }},
 {% endfor %}
 {% endif %}
 {% if bluesky.top or bluesky.recent %}
-## Social Highlights
+### Social Highlights
 
 Posts since last newsletter from [Bluesky](https://bsky.app/profile/ssp.sh) - but also shared on [Twitter](https://x.com/sspaeti/), [LinkedIn(https://www.linkedin.com/in/sspaeti/), [LinkedIn SSP Data](https://www.linkedin.com/company/sspaeti/), [Mastodon](https://hachyderm.io/@sspaeti), [Substack (limited)](https://substack.com/@sspaeti) and [YouTube](https://www.youtube.com/@sspaeti):
 {% if bluesky.top %}
-### Top by engagement
+#### Top by engagement
 {% for p in bluesky.top %}
 - **[{{ p.text|replace('\n', ' ')|truncate(140) }}]({{ p.url }})** — ♥︎ {{ p.likes }} · ↻ {{ p.reposts }} · 💬︎ {{ p.replies }}
 {% endfor %}
 {% endif %}
 {% if bluesky.recent %}
-### Most recent
+#### Most recent
 {% for p in bluesky.recent %}
 - **[{{ p.text|replace('\n', ' ')|truncate(140) }}]({{ p.url }})** — ♥︎ {{ p.likes }} · ↻ {{ p.reposts }} · 💬︎ {{ p.replies }}
 {% endfor %}
